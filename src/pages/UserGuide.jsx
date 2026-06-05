@@ -49,10 +49,7 @@ export default function UserGuide({ onNavigate }) {
           </p>
         </GlassCard>
 
-        {/* Telegram Shortcut Tip Box */}
-        <div className="bg-zinc-950/40 border border-dashed border-white/5 rounded-xl p-4 text-center text-xs text-zinc-500 font-mono">
-          💡 Telegram Bot Shortcut: Run <span className="text-brand-accent">/guide</span> directly inside your text input terminal to recall these documentation parameters.
-        </div>
+        
       </div>
     </div>
   );
