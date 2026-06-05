@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { dropStore } from '@/features/drops/dropStore';
 import { useTelegram } from '@/hooks/useTelegram';
 import Button from '@/components/ui/Button';
@@ -13,17 +13,35 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export default function ClaimReward({ id, onNavigate }) {
+export default function ClaimReward({ id, onNavigate, setDropId }) {
   const { user, triggerHaptic } = useTelegram();
   const drop = dropStore.getDropById(id);
 
   const [claimState, setClaimState] = useState('idle');
   const [rollingAmount, setRollingAmount] = useState('0.00');
   const [revealedAmount, setRevealedAmount] = useState('');
-  const [redirectPayloadUrl, setRedirectPayloadUrl] = useState(''); // 🚀 Stores dynamic backend bot deep link
+  const [redirectPayloadUrl, setRedirectPayloadUrl] = useState(''); 
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [statusText, setStatusText] = useState('');
+
+  // 🔄 Hydrate states automatically if a claim footprint exists for this user session
+  useEffect(() => {
+    if (!drop) return;
+    
+    const userId = user?.id?.toString() || 'guest';
+    const hasAlreadyClaimed = dropStore.hasUserClaimed(userId, drop.id);
+    
+    if (hasAlreadyClaimed) {
+      // Find the user's specific logged payout size from the history feed arrays
+      const pastClaimLog = drop.claimsList?.find(
+        log => log.username === user?.username || log.userId === userId
+      );
+      
+      setRevealedAmount(pastClaimLog?.amount || drop.amount || '0.00');
+      setClaimState('revealed');
+    }
+  }, [id, user, drop]);
 
   const triggerConfetti = () => {
     const duration = 1200;
@@ -120,7 +138,7 @@ export default function ClaimReward({ id, onNavigate }) {
 
       setTimeout(() => {
         setRevealedAmount(result.amountClaimed);
-        setRedirectPayloadUrl(result.redirectUrl); // 💾 Cache dynamic target redirection string securely
+        setRedirectPayloadUrl(result.redirectUrl); 
         setClaimState('revealed');
         setStatusText('');
         triggerHaptic('success');
@@ -139,13 +157,13 @@ export default function ClaimReward({ id, onNavigate }) {
       triggerHaptic('success');
 
       setTimeout(() => {
-        // 🌐 Leverage safe sandboxed WebApp routing paths if executing inside Telegram webviews
-        const finalUrl = redirectPayloadUrl || `https://t.me/SwiftyEx_bot`;
+        // 🚀 OPTION B: Clean routing directly to the core bot interface canvas
+        const cleanBotUrl = `https://t.me/SwiftyEx_bot`;
         
         if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.openTelegramLink(finalUrl);
+          window.Telegram.WebApp.openTelegramLink(cleanBotUrl);
         } else {
-          window.open(finalUrl, '_blank');
+          window.open(cleanBotUrl, '_blank');
         }
         
         setWithdrawSuccess(false);
@@ -154,20 +172,14 @@ export default function ClaimReward({ id, onNavigate }) {
     }, 1500);
   };
 
-    const handleInviteFriends = () => {
+  const handleInviteFriends = () => {
     triggerHaptic('success');
 
-    // 1. Define the unique deep link target for this explicit campaign
     const appUrl = `https://t.me/swift_dropbot/app?startapp=${drop.id}`;
-
-    // 2. Draft a punchy message body (with the custom merchant community link appended)
     const rawText = `🎁 I just claimed a reward on SwiftDrop!\n\nGrab your crypto allocation slot before the pool runs dry! 🚀\n\nJoin community updates: ${drop.communityUrl}`;
     const shareText = encodeURIComponent(rawText);
-
-    // 3. Combine both parameters safely into the official Telegram share hook string
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${shareText}`;
 
-    // 4. Dispatch the link handler natively based on the runtime context environment
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.openTelegramLink(shareUrl);
     } else {
@@ -229,8 +241,8 @@ export default function ClaimReward({ id, onNavigate }) {
               +{revealedAmount} <span className="text-lg font-mono font-bold text-zinc-400">{drop.token}</span>
             </h3>
 
-            <p className="text-xs text-zinc-400 font-medium">
-              Allocation computed and signed. Ready for ledger settlement.
+            <p className="text-xs text-zinc-400 font-medium max-w-xs mx-auto">
+              Allocation successfully locked! Tap below to open SwiftyEx to manage your balance settlement.
             </p>
 
             <Sparkles className="mx-auto h-4 w-4 text-yellow-400 animate-pulse" />
@@ -247,7 +259,7 @@ export default function ClaimReward({ id, onNavigate }) {
               disabled={isWithdrawing}
               className="w-full py-3.5 bg-brand-success text-black rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-green-400 cursor-pointer disabled:opacity-40 transition-all"
             >
-              <span>{isWithdrawing ? 'Settle Requesting...' : withdrawSuccess ? 'Dispatched!' : 'Settle via SwiftyEx'}</span>
+              <span>{isWithdrawing ? 'Processing Reward...' : withdrawSuccess ? 'Successful!' : 'Withdraw to SwiftyEx'}</span>
               <ArrowUpRight className="h-3.5 w-3.5 stroke-3" />
             </button>
 
@@ -256,7 +268,15 @@ export default function ClaimReward({ id, onNavigate }) {
               Invite to Campaign
             </Button>
 
-            <Button variant="ghost" onClick={() => onNavigate('leaderboard')} className="w-full py-3 text-xs font-semibold text-zinc-400">
+            {/* 🚀 Dynamic router binding so back navigation recovers this specific profile timeline context */}
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                if (typeof setDropId === 'function') setDropId(drop.id);
+                onNavigate('leaderboard');
+              }} 
+              className="w-full py-3 text-xs font-semibold text-zinc-400"
+            >
               <BarChart3 className="h-4 w-4" />
               View Leaderboard
             </Button>

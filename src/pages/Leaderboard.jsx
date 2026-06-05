@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { dropStore } from '@/features/drops/dropStore';
 import GlassCard from '@/components/ui/GlassCard';
 import BackButton from '@/components/ui/BackButton';
-import { dropStore } from '@/features/drops/dropStore';
 import { Trophy } from 'lucide-react';
 
 // 🚀 Accepted dropId prop passed from Router configuration parameters
@@ -16,7 +16,6 @@ export default function Leaderboard({ onNavigate, dropId }) {
 
       // Aggregate all real claim data present in your active store
       liveDrops.forEach((drop) => {
-        // If your store has a historical list of claims, we map them here
         if (drop.claimsList && Array.isArray(drop.claimsList)) {
           drop.claimsList.forEach((claim) => {
             const username = claim.username || "anonymous_user";
@@ -83,15 +82,17 @@ export default function Leaderboard({ onNavigate, dropId }) {
           </p>
         ) : (
           rankings.map((item) => (
-            <GlassCard key={item.rank} className="flex items-center justify-between p-4 border-white/5 bg-linear-to-br from-zinc-950 to-zinc-900/40 rounded-2xl">
+            <GlassCard key={item.rank} className="flex items-center justify-between p-4 border-white/5 bg-gradient-to-br from-zinc-950 to-zinc-900/40 rounded-2xl text-left">
               <div className="flex items-center gap-4">
                 <span className={`text-lg font-black ${
-                  item.rank === 1 ? 'text-brand-gold' : item.rank === 2 ? 'text-zinc-400' : 'text-zinc-500'
+                  item.rank === 1 ? 'text-amber-400' : item.rank === 2 ? 'text-zinc-400' : 'text-zinc-500'
                 }`}>
                   #{item.rank}
                 </span>
                 <div>
-                  <p className="font-bold text-sm text-zinc-200">@{item.user}</p>
+                  <p className="font-bold text-sm text-zinc-200">
+                    {item.user?.startsWith('@') ? item.user : `@${item.user}`}
+                  </p>
                   <p className="text-[10px] text-zinc-500">{item.claims} Successful Claims</p>
                 </div>
               </div>
