@@ -17,31 +17,41 @@ export default function DropDetails({ id, onNavigate }) {
     );
   }
 
-  const handleShareMock = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(`https://t.me/SwiftyDropBot/app?startapp=${drop.id}`);
-      alert("Mini App share routing string saved to host clipboard!");
+  // 🚀 UPGRADED: High-Fidelity Viral Share Mechanism
+  const handleShareCampaign = () => {
+    const appUrl = `https://t.me/swift_dropbot/app?startapp=${drop.id}`;
+    const rawText = `🎁 Grab your share of the ${drop.title} reward pool instantly on SwiftDrop!`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(rawText)}`;
+
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.openTelegramLink(shareUrl);
+    } else {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(appUrl);
+        alert("Campaign routing link saved to clipboard!");
+      } else {
+        window.open(shareUrl, '_blank');
+      }
     }
   };
 
   return (
     <div className="space-y-5 pt-2 animate-reveal">
-      {/* Handled natively inside layout structure using our custom standalone handler */}
       <BackButton onBack={() => onNavigate('home')} fallbackText="Back" />
 
       <div className="space-y-4">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 text-left">
           <h2 className="text-2xl font-bold tracking-tight text-white">{drop.title}</h2>
           <span className="inline-flex items-center bg-zinc-900 border border-zinc-800 text-zinc-300 text-[10px] px-2.5 py-0.5 rounded-full font-mono">
             POOL_ID: {drop.id}
           </span>
         </div>
 
-        <p className="text-sm text-zinc-300 leading-relaxed bg-zinc-900/30 p-4 rounded-xl border border-white/2">
+        <p className="text-sm text-zinc-300 text-left leading-relaxed bg-zinc-900/30 p-4 rounded-xl border border-white/5">
           {drop.description}
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 text-left">
           <GlassCard className="p-4 flex flex-col gap-1">
             <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
               <Wallet className="h-3 w-3 text-brand-accent" /> Total Allocation
@@ -62,7 +72,7 @@ export default function DropDetails({ id, onNavigate }) {
         </div>
 
         {/* Informational UI element explaining mechanics to judges */}
-        <div className="p-3 bg-brand-accentGlow/10 border border-brand-accent/10 rounded-xl flex items-start gap-2 text-xs text-zinc-400 leading-normal">
+        <div className="p-3 bg-zinc-950/40 border border-white/5 rounded-xl flex items-start gap-2 text-xs text-zinc-400 text-left leading-normal">
           <Info className="h-4 w-4 text-brand-accent shrink-0 mt-0.5" />
           <span>
             Financial verification and atomic settlements execute instantaneously via decentralized ledger queries through the <strong>SwiftyEx_bot</strong> backplane.
@@ -70,11 +80,13 @@ export default function DropDetails({ id, onNavigate }) {
         </div>
 
         <div className="space-y-2 pt-2">
-          <Button onClick={() => onNavigate('claim')}>
-            Go to Claim Portal
+          {/* 🚀 FIXED PIPELINE: Routes strictly to verify-action first to fire verification rules before claim slots */}
+          <Button onClick={() => onNavigate('verify-action')}>
+            Go to Verification Tasks
           </Button>
-          <Button variant="secondary" onClick={handleShareMock} className="flex items-center justify-center gap-2">
-            <Share2 className="h-4 w-4" /> Export Campaign Distribution Link
+          
+          <Button variant="secondary" onClick={handleShareCampaign} className="flex items-center justify-center gap-2 py-3 text-xs font-semibold text-zinc-300">
+            <Share2 className="h-4 w-4" /> Share Campaign Link
           </Button>
         </div>
       </div>

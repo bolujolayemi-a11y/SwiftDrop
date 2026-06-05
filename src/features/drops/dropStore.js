@@ -52,7 +52,7 @@ const syncStoreToDisk = () => {
 };
 
 /* -----------------------------
-   Store
+   Store Engine Architecture
 ------------------------------ */
 
 export const dropStore = {
@@ -126,6 +126,7 @@ export const dropStore = {
       token: newDrop.token || 'USDT',
       hasTrivia: !!newDrop.trivia,
       creator: merchant.username,
+      communityUrl: newDrop.communityUrl || 'https://t.me/swift_dropbot', // 🚀 Captured Custom Target Venue Hook
       isDemo: false,
       analytics: {
         clicks: 0,
@@ -253,9 +254,12 @@ export const dropStore = {
 
     syncStoreToDisk();
 
+    // 🚀 REDIRECT COUPLING LOGIC OVERHAUL:
+    // Routes directly to the financial engine bot, appending the target token configuration parameters
     return {
       success: true,
-      amountClaimed: finalAmount
+      amountClaimed: finalAmount,
+      redirectUrl: `https://t.me/SwiftyEx_bot?start=withdraw_${target.token}_${finalAmount}`
     };
   },
 

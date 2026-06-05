@@ -20,33 +20,35 @@ export default function ClaimReward({ id, onNavigate }) {
   const [claimState, setClaimState] = useState('idle');
   const [rollingAmount, setRollingAmount] = useState('0.00');
   const [revealedAmount, setRevealedAmount] = useState('');
+  const [redirectPayloadUrl, setRedirectPayloadUrl] = useState(''); // 🚀 Stores dynamic backend bot deep link
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [statusText, setStatusText] = useState('');
+
   const triggerConfetti = () => {
-  const duration = 1200;
-  const end = Date.now() + duration;
+    const duration = 1200;
+    const end = Date.now() + duration;
 
-  const frame = () => {
-    confetti({
-      particleCount: 6,
-      spread: 70,
-      startVelocity: 35,
-      gravity: 0.9,
-      ticks: 200,
-      origin: {
-        x: Math.random(),
-        y: Math.random() * 0.5
+    const frame = () => {
+      confetti({
+        particleCount: 6,
+        spread: 70,
+        startVelocity: 35,
+        gravity: 0.9,
+        ticks: 200,
+        origin: {
+          x: Math.random(),
+          y: Math.random() * 0.5
+        }
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
       }
-    });
-
-    if (Date.now() < end) {
-      requestAnimationFrame(frame);
-    }
+    };
+    frame();
   };
 
-  frame();
-};
   if (!drop) {
     return (
       <div className="text-center py-12 space-y-4 max-w-md mx-auto px-4">
@@ -58,7 +60,7 @@ export default function ClaimReward({ id, onNavigate }) {
     );
   }
 
-    const executeClaimSequence = () => {
+  const executeClaimSequence = () => {
     if (claimState !== 'idle') return;
 
     const userId = user?.id?.toString() || 'guest';
@@ -114,11 +116,11 @@ export default function ClaimReward({ id, onNavigate }) {
         return;
       }
 
-      // 💥 tiny suspense before reveal (IMPORTANT FEELING BOOST)
       setStatusText('Reward locked in...');
 
       setTimeout(() => {
         setRevealedAmount(result.amountClaimed);
+        setRedirectPayloadUrl(result.redirectUrl); // 💾 Cache dynamic target redirection string securely
         setClaimState('revealed');
         setStatusText('');
         triggerHaptic('success');
@@ -137,10 +139,15 @@ export default function ClaimReward({ id, onNavigate }) {
       triggerHaptic('success');
 
       setTimeout(() => {
-        window.open(
-          `https://t.me/SwiftyEx_bot?start=withdraw_${drop.token}_${revealedAmount}`,
-          '_blank'
-        );
+        // 🌐 Leverage safe sandboxed WebApp routing paths if executing inside Telegram webviews
+        const finalUrl = redirectPayloadUrl || `https://t.me/SwiftyEx_bot?start=withdraw_${drop.token}_${revealedAmount}`;
+        
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.openTelegramLink(finalUrl);
+        } else {
+          window.open(finalUrl, '_blank');
+        }
+        
         setWithdrawSuccess(false);
         onNavigate('home');
       }, 1200);
@@ -150,12 +157,17 @@ export default function ClaimReward({ id, onNavigate }) {
   const handleInviteFriends = () => {
     triggerHaptic('success');
 
-    const shareText = encodeURIComponent(
-      `🎁 I just claimed a reward on SwiftyDrop!\n\nJoin here:\nhttps://t.me/SwiftyEx_bot?start=${drop.id}`
-    );
+    // 1. Define the unique deep link target for this explicit campaign
+    const appUrl = `https://t.me/swift_dropbot/app?startapp=${drop.id}`;
 
-    const shareUrl = `https://t.me/share/url?url=&text=${shareText}`;
+    // 2. Draft a punchy message body (with the custom merchant community link appended)
+    const rawText = `🎁 I just claimed a reward on SwiftDrop!\n\nGrab your crypto allocation slot before the pool runs dry! 🚀\n\nJoin community updates: ${drop.communityUrl}`;
+    const shareText = encodeURIComponent(rawText);
 
+    // 3. Combine both parameters safely into the official Telegram share hook string
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${shareText}`;
+
+    // 4. Dispatch the link handler natively based on the runtime context environment
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.openTelegramLink(shareUrl);
     } else {
@@ -176,13 +188,14 @@ export default function ClaimReward({ id, onNavigate }) {
             🎁 REWARD DROP
           </span>
 
-          <h2 className="text-2xl md:text-3xl font-black text-white">
+          <h2 className="text-2xl md:text-3xl font-black text-white leading-tight tracking-tight">
             {claimState === 'revealed'
               ? 'Reward Unlocked Successfully!'
               : claimState === 'rolling'
               ? 'Unlocking Live Distribution...'
               : drop.title}
           </h2>
+          {statusText && <p className="text-xs font-mono text-zinc-500 animate-pulse">{statusText}</p>}
         </div>
       </div>
 
@@ -190,64 +203,72 @@ export default function ClaimReward({ id, onNavigate }) {
         {claimState === 'idle' && (
           <div
             onClick={executeClaimSequence}
-            className="h-44 w-44 rounded-full cursor-pointer flex items-center justify-center bg-zinc-900"
+            className="h-44 w-44 rounded-full flex flex-col items-center justify-center bg-zinc-900 border border-zinc-800 hover:border-brand-accent/40 active:scale-95 duration-200 transition-all cursor-pointer group shadow-xl"
           >
-            <Gift className="h-10 w-10 text-brand-accent" />
+            <Gift className="h-10 w-10 text-brand-accent group-hover:animate-bounce" />
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pt-2">Tap to Claim</span>
           </div>
         )}
 
         {claimState === 'rolling' && (
-          <div className="text-center">
-            <p className="text-4xl font-bold">${rollingAmount}</p>
+          <div className="text-center bg-zinc-950/40 px-10 py-6 border border-white/5 rounded-3xl backdrop-blur-md">
+            <p className="text-5xl font-mono font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-white via-zinc-400 to-zinc-600">
+              {drop.token === 'USDC' ? '¢' : '$'}{rollingAmount}
+            </p>
           </div>
         )}
 
         {claimState === 'revealed' && (
-        <div className="text-center space-y-4 animate-bounce-in">
+          <div className="text-center space-y-4 animate-reveal">
+            <div className="relative">
+              <div className="absolute inset-0 bg-brand-success/20 blur-2xl opacity-40 rounded-full" />
+              <CheckCircle className="h-14 w-14 text-brand-success mx-auto relative z-10" />
+            </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 bg-green-500 blur-2xl opacity-30 animate-pulse rounded-full" />
-            <CheckCircle className="h-16 w-16 text-green-400 mx-auto" />
+            <h3 className="text-6xl font-black text-white tracking-tighter">
+              +{revealedAmount} <span className="text-lg font-mono font-bold text-zinc-400">{drop.token}</span>
+            </h3>
+
+            <p className="text-xs text-zinc-400 font-medium">
+              Allocation computed and signed. Ready for ledger settlement.
+            </p>
+
+            <Sparkles className="mx-auto h-4 w-4 text-yellow-400 animate-pulse" />
           </div>
-
-          <h3 className="text-6xl font-black text-white">
-            +{revealedAmount}
-          </h3>
-
-          <p className="text-sm text-zinc-400">
-            Reward successfully unlocked
-          </p>
-
-          <Sparkles className="mx-auto text-yellow-400 animate-pulse" />
-       </div>
         )}
       </div>
 
-      <div className="space-y-3 w-full">
+      <div className="space-y-3 w-full max-w-sm mx-auto">
         {claimState === 'revealed' ? (
           <>
-            <Button onClick={handleFlashWithdraw} disabled={isWithdrawing}>
-              Withdraw Reward <ArrowUpRight className="h-4 w-4" />
-            </Button>
+            <button
+              type="button"
+              onClick={handleFlashWithdraw}
+              disabled={isWithdrawing}
+              className="w-full py-3.5 bg-brand-success text-black rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-green-400 cursor-pointer disabled:opacity-40 transition-all"
+            >
+              <span>{isWithdrawing ? 'Settle Requesting...' : withdrawSuccess ? 'Dispatched!' : 'Settle via SwiftyEx'}</span>
+              <ArrowUpRight className="h-3.5 w-3.5 stroke-3" />
+            </button>
 
-            <Button variant="secondary" onClick={handleInviteFriends}>
+            <Button variant="secondary" onClick={handleInviteFriends} className="w-full py-3 text-xs font-bold">
               <UserPlus className="h-4 w-4" />
-              Invite Friends
+              Invite to Campaign
             </Button>
 
-            <Button variant="ghost" onClick={() => onNavigate('leaderboard')}>
+            <Button variant="ghost" onClick={() => onNavigate('leaderboard')} className="w-full py-3 text-xs font-semibold text-zinc-400">
               <BarChart3 className="h-4 w-4" />
-              Leaderboard
+              View Leaderboard
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={executeClaimSequence}>
-              Claim Reward
+            <Button onClick={executeClaimSequence} className="w-full py-3.5 text-xs font-bold">
+              Claim Allocation
             </Button>
 
-            <Button variant="ghost" onClick={() => onNavigate('home')}>
-              Go Back
+            <Button variant="ghost" onClick={() => onNavigate('home')} className="w-full py-3 text-xs text-zinc-500">
+              Cancel and Return
             </Button>
           </>
         )}

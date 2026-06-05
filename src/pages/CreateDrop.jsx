@@ -27,7 +27,8 @@ export default function CreateDrop({ onNavigate }) {
   const [winners, setWinners] = useState('');
   const [token, setToken] = useState('USDT'); 
   const [isMystery, setIsMystery] = useState(false);
-  
+  const [communityUrl, setCommunityUrl] = useState(''); // 🌐 Added Community URL tracker
+
   // Custom Merchant-Editable Trivia Gate States
   const [hasTrivia, setHasTrivia] = useState(false);
   const [triviaQuestion, setTriviaQuestion] = useState('');
@@ -85,7 +86,7 @@ export default function CreateDrop({ onNavigate }) {
       setIsMystery(!!campaignData.isMystery);
       setHasTrivia(!!campaignData.hasTrivia);
 
-      // Inject the context-specific trivia block array parameters if flagged true
+      // Inject the context-specific trivia block parameters if flagged true
       if (campaignData.hasTrivia && campaignData.trivia) {
         setTriviaQuestion(campaignData.trivia.question || '');
         setTriviaOptions(campaignData.trivia.options || ['', '']);
@@ -116,6 +117,7 @@ export default function CreateDrop({ onNavigate }) {
       winnersCount: parseInt(winners, 10),
       token, 
       isMystery,
+      communityUrl: communityUrl.trim() || "https://t.me/swift_dropbot", // 🚀 Hydrated community hook field
       creator: user?.username || 'swift_merchant', 
       trivia: hasTrivia ? {
         question: triviaQuestion,
@@ -164,7 +166,7 @@ export default function CreateDrop({ onNavigate }) {
           <div>
             <h2 className="text-2xl font-black tracking-tight text-white">Campaign Initialized Successfully</h2>
             <p className="text-xs text-zinc-400">
-              Settlement payload is live. Fund this campaign directly via SwiftyEx_bot to launch distribution channels.
+              Your campaign is live. Fund this campaign directly via SwiftyEx_bot to launch distribution channels.
             </p>
           </div>
         </div>
@@ -172,7 +174,7 @@ export default function CreateDrop({ onNavigate }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
           <div className="md:col-span-2 w-full space-y-4">
             
-            <GlassCard className="bg-gradient-to-br from-zinc-950 to-zinc-900/40 border-white/5 p-4 rounded-2xl flex items-center justify-between">
+            <GlassCard className="bg-linear-to-br from-zinc-950 to-zinc-900/40 border-white/5 p-4 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-3 text-left">
                 <img 
                   src={user?.photo_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80"} 
@@ -204,6 +206,10 @@ export default function CreateDrop({ onNavigate }) {
                 <span className="text-zinc-500 font-sans font-bold uppercase tracking-wider">Max Claims</span>
                 <span className="text-zinc-100 text-sm font-bold">{createdDropRef?.winnersCount} Claim Slots</span>
               </div>
+              <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                <span className="text-zinc-500 font-sans font-bold uppercase tracking-wider">Target Chat URL</span>
+                <span className="text-zinc-300 text-xs select-all truncate max-w-xs">{createdDropRef?.communityUrl}</span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500 font-sans font-bold uppercase tracking-wider">Anti-Bot Gate</span>
                 <span className="text-zinc-400 font-sans font-medium">{hasTrivia ? "🧠 Trivia Question Enabled" : "🔓 Public Access"}</span>
@@ -217,7 +223,7 @@ export default function CreateDrop({ onNavigate }) {
               onClick={() => window.open(`https://t.me/SwiftyEx_bot?start=${createdDropRef?.id}`, '_blank')}
               className="w-full relative overflow-hidden group py-3"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-brand-accent to-blue-600 transition-all group-hover:opacity-90" />
+              <div className="absolute inset-0 bg-linear-to-r from-brand-accent to-blue-600 transition-all group-hover:opacity-90" />
               <span className="relative z-10 flex items-center justify-center gap-1.5 text-xs font-bold">
                 ⚡ Fund via SwiftyEx_bot <ExternalLink className="h-3.5 w-3.5" />
               </span>
@@ -275,6 +281,7 @@ export default function CreateDrop({ onNavigate }) {
           onChange={(e) => setTitle(e.target.value)} 
           required 
         />
+        
         <div className="w-full space-y-2 text-left">
           <label className="text-xs uppercase tracking-widest text-zinc-400 font-medium">Campaign Context Description</label>
           <textarea 
@@ -286,8 +293,23 @@ export default function CreateDrop({ onNavigate }) {
           />
         </div>
 
+        {/* 🌐 New Target Community Link Input UI Block Component */}
+        <div className="w-full space-y-2 text-left">
+          <label className="text-xs uppercase tracking-widest text-zinc-400 font-medium">Target Community Chat Link</label>
+          <input 
+            type="url"
+            placeholder="e.g., https://t.me/your_community_channel"
+            value={communityUrl}
+            onChange={(e) => setCommunityUrl(e.target.value)}
+            className="w-full glass-input px-4 py-3 rounded-xl text-white outline-none placeholder-zinc-600 text-sm border border-zinc-800 focus:border-zinc-700 bg-zinc-950/20"
+          />
+          <p className="text-[10px] text-zinc-500 leading-relaxed pl-1">
+            Optional. The platform links claimers directly to this target profile workspace during viral task routines.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          {/* 💵 Capital Allocation Input wrapped inside an explicit relative positioning parent container */}
+          {/* 💵 Capital Allocation Input */}
           <div className="relative flex flex-col justify-end w-full">
             <Input 
               label="Funding Capital Size" 
@@ -297,16 +319,15 @@ export default function CreateDrop({ onNavigate }) {
               value={amount} 
               onChange={(e) => setAmount(e.target.value)} 
               required 
-              // 🚀 THE FIX: Extra inner padding space ensures inputs never slip underneath the selectors
               className="pr-28" 
             />
             
-            {/* 🪙 High-Fidelity Multi-Token Pivot Group with concrete fixed size parameters to block line wrapping */}
-            <div className="absolute right-2 bottom-1.5 flex items-center gap-1 bg-zinc-900/90 border border-white/5 p-1 rounded-xl h-9 z-10 shadow-lg backdrop-blur-sm w-[100px] justify-between">
+            {/* 🪙 High-Fidelity Multi-Token Pivot Group */}
+            <div className="absolute right-2 bottom-1.5 flex items-center gap-1 bg-zinc-900/90 border border-white/5 p-1 rounded-xl h-9 z-10 shadow-lg backdrop-blur-sm w-25 justify-between">
               <button
                 type="button"
                 onClick={() => setToken('USDT')}
-                className={`text-[9px] font-mono font-black w-[44px] py-1.5 rounded-lg transition-all cursor-pointer tracking-tight text-center select-none ${
+                className={`text-[9px] font-mono font-black w-11 py-1.5 rounded-lg transition-all cursor-pointer tracking-tight text-center select-none ${
                   token === 'USDT' 
                     ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/25' 
                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
@@ -317,7 +338,7 @@ export default function CreateDrop({ onNavigate }) {
               <button
                 type="button"
                 onClick={() => setToken('USDC')}
-                className={`text-[9px] font-mono font-black w-[44px] py-1.5 rounded-lg transition-all cursor-pointer tracking-tight text-center select-none ${
+                className={`text-[9px] font-mono font-black w-11 py-1.5 rounded-lg transition-all cursor-pointer tracking-tight text-center select-none ${
                   token === 'USDC' 
                     ? 'bg-amber-500 text-black shadow-md shadow-amber-500/25' 
                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
