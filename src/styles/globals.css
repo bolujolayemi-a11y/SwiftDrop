@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Gamified Fintech Colors (Kept exactly as designed - stunning contrast) */
+  --color-brand-bg: #000000;
+  --color-brand-surface: #0B0B0C;
+  --color-brand-card: #121214;
+  --color-brand-accent: #007AFF;
+  --color-brand-accentGlow: rgba(0, 122, 255, 0.15);
+  --color-brand-success: #34C759;
+  --color-brand-gold: #FFD700;
+
+  /* 🚫 Fixed Animations: Set to instant execution to eliminate page sliding/shifting */
+  --animate-glow-pulse: none;
+  --animate-float: none;
+  --animate-reveal: instantReveal 0s linear forwards;
+
+  @keyframes instantReveal {
+    0% { opacity: 1; transform: none; }
+    100% { opacity: 1; transform: none; }
+  }
+}
+
+/* Custom Base Layers and Custom Glassmorphic Utilities */
+body {
+  background-color: var(--color-brand-bg);
+  color: #FFFFFF;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-brand-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: #27272A;
+  border-radius: 3px;
+}
+
+.glass-panel {
+  background: rgba(18, 18, 20, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.glass-input:focus {
+  border-color: var(--color-brand-accent);
+  background: rgba(0, 122, 255, 0.02);
+  box-shadow: 0 0 20px rgba(0, 122, 255, 0.15);
+}
