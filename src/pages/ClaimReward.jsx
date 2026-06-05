@@ -140,7 +140,7 @@ export default function ClaimReward({ id, onNavigate }) {
 
       setTimeout(() => {
         // 🌐 Leverage safe sandboxed WebApp routing paths if executing inside Telegram webviews
-        const finalUrl = redirectPayloadUrl || `https://t.me/SwiftyEx_bot?start=withdraw_${drop.token}_${revealedAmount}`;
+        const finalUrl = redirectPayloadUrl || `https://t.me/SwiftyEx_bot`;
         
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.openTelegramLink(finalUrl);
@@ -154,7 +154,7 @@ export default function ClaimReward({ id, onNavigate }) {
     }, 1500);
   };
 
-  const handleInviteFriends = () => {
+    const handleInviteFriends = () => {
     triggerHaptic('success');
 
     // 1. Define the unique deep link target for this explicit campaign

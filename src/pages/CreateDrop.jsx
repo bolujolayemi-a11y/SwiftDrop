@@ -220,9 +220,17 @@ export default function CreateDrop({ onNavigate }) {
           <div className="space-y-3 bg-zinc-900/20 border border-white/5 p-5 rounded-2xl w-full">
             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Execution Controls</span>
             <Button 
-              onClick={() => window.open(`https://t.me/SwiftyEx_bot?start=${createdDropRef?.id}`, '_blank')}
-              className="w-full relative overflow-hidden group py-3"
-            >
+              onClick={() => {
+              // 🚀 OPTION B: Direct routing to the bot chat canvas layer
+              const cleanBotUrl = 'https://t.me/SwiftyEx_bot';
+              if (window.Telegram?.WebApp) {
+              window.Telegram.WebApp.openTelegramLink(cleanBotUrl);
+              } else {
+                window.open(cleanBotUrl, '_blank');
+              }
+              }}
+             className="w-full relative overflow-hidden group py-3"
+              >
               <div className="absolute inset-0 bg-linear-to-r from-brand-accent to-blue-600 transition-all group-hover:opacity-90" />
               <span className="relative z-10 flex items-center justify-center gap-1.5 text-xs font-bold">
                 ⚡ Fund via SwiftyEx_bot <ExternalLink className="h-3.5 w-3.5" />
