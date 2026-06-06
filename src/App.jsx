@@ -78,10 +78,20 @@ export default function App() {
     });
   };
 
-  if (!initialized) {
-    return null;
-  }
+    if (!initialized) {
+      return null;
+    }
+    console.log('FULL WEBAPP', window.Telegram?.WebApp);
 
+  console.log(
+    'FULL INIT DATA',
+    window.Telegram?.WebApp?.initDataUnsafe
+  );
+
+  console.log(
+    'START PARAM',
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param
+  );
   return (
     <Providers>
       <PageWrapper>
