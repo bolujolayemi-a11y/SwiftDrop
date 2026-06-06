@@ -13,6 +13,20 @@ export default function App() {
   const [currentDropId, setCurrentDropId] = useState(null);
   const [routeParams, setRouteParams] = useState(null);
   const [initialized, setInitialized] = useState(false);
+  const returnState = sessionStorage.getItem('returnFromWithdraw');
+
+if (returnState) {
+  const parsed = JSON.parse(returnState);
+
+  sessionStorage.removeItem('returnFromWithdraw');
+
+  if (parsed?.dropId) {
+    setCurrentDropId(parsed.dropId);
+    setCurrentPage(parsed.page || 'claim'); // 👈 THIS IS THE KEY FIX
+    setInitialized(true);
+    return;
+  }
+}
 
   useEffect(() => {
     const detectDeepLink = () => {
@@ -25,9 +39,7 @@ export default function App() {
 
         if (startParam) {
           setCurrentDropId(startParam);
-
           dropStore.incrementClickCount?.(startParam);
-
           setCurrentPage('deeplink');
           setInitialized(true);
           return;
@@ -41,17 +53,15 @@ export default function App() {
 
         if (webStartParam) {
           setCurrentDropId(webStartParam);
-
           dropStore.incrementClickCount?.(webStartParam);
-
           setCurrentPage('deeplink');
           setInitialized(true);
           return;
         }
 
         setInitialized(true);
-      } catch (error) {
-        console.error('Deep link detection failed:', error);
+      } catch (err) {
+        console.error('Deep link error:', err);
         setInitialized(true);
       }
     };
@@ -64,15 +74,10 @@ export default function App() {
     setCurrentPage(page);
     setRouteParams(params);
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (!initialized) {
-    return null;
-  }
+  if (!initialized) return null;
 
   return (
     <Providers>

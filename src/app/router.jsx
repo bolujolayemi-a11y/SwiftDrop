@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Home from '@/pages/Home';
 import CreateDrop from '@/pages/CreateDrop';
 import Dashboard from '@/pages/Dashboard';
@@ -19,32 +20,26 @@ export default function Router({
   setDropId,
   params
 }) {
+  const commonProps = {
+    onNavigate,
+    setDropId
+  };
+
   switch (currentPage) {
     case 'home':
-      return (
-        <Home
-          onNavigate={onNavigate}
-          setDropId={setDropId}
-        />
-      );
+      return <Home {...commonProps} />;
 
     case 'create':
       return <CreateDrop onNavigate={onNavigate} />;
 
     case 'dashboard':
-      return (
-        <Dashboard
-          onNavigate={onNavigate}
-          setDropId={setDropId}
-        />
-      );
+      return <Dashboard {...commonProps} />;
 
     case 'details':
       return (
         <DropDetails
           id={currentDropId}
-          onNavigate={onNavigate}
-          setDropId={setDropId}
+          {...commonProps}
         />
       );
 
@@ -52,8 +47,7 @@ export default function Router({
       return (
         <ClaimReward
           id={currentDropId}
-          onNavigate={onNavigate}
-          setDropId={setDropId}
+          {...commonProps}
         />
       );
 
@@ -86,8 +80,7 @@ export default function Router({
       return (
         <Gatekeeper
           id={currentDropId}
-          onNavigate={onNavigate}
-          setDropId={setDropId}
+          {...commonProps}
         />
       );
 
@@ -107,11 +100,6 @@ export default function Router({
       );
 
     default:
-      return (
-        <Home
-          onNavigate={onNavigate}
-          setDropId={setDropId}
-        />
-      );
+      return <Home {...commonProps} />;
   }
 }
