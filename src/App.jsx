@@ -12,38 +12,60 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [currentDropId, setCurrentDropId] = useState(null);
   const [routeParams, setRouteParams] = useState(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    const tgStartParam =
-      window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
-      tg?.initDataUnsafe?.start_param;
+    const detectDeepLink = () => {
+      try {
+        const webApp = window.Telegram?.WebApp;
 
-    if (tgStartParam) {
-      console.log('Telegram Deep Link:', tgStartParam);
+        console.log('Telegram WebApp:', webApp);
+        console.log('initDataUnsafe:', webApp?.initDataUnsafe);
 
-      setCurrentDropId(tgStartParam);
+        const startParam =
+          webApp?.initDataUnsafe?.start_param ||
+          tg?.initDataUnsafe?.start_param;
 
-      dropStore.incrementClickCount?.(tgStartParam);
+        if (startParam) {
+          console.log('Telegram Deep Link:', startParam);
 
-      setCurrentPage('deeplink');
-      return;
-    }
+          setCurrentDropId(startParam);
 
-    const urlParams = new URLSearchParams(window.location.search);
+          dropStore.incrementClickCount?.(startParam);
 
-    const webStartParam =
-      urlParams.get('startapp') ||
-      urlParams.get('dropId');
+          setCurrentPage('deeplink');
+          setInitialized(true);
+          return;
+        }
 
-    if (webStartParam) {
-      console.log('Web Deep Link:', webStartParam);
+        const urlParams = new URLSearchParams(window.location.search);
 
-      setCurrentDropId(webStartParam);
+        const webStartParam =
+          urlParams.get('startapp') ||
+          urlParams.get('dropId');
 
-      dropStore.incrementClickCount?.(webStartParam);
+        if (webStartParam) {
+          console.log('Web Deep Link:', webStartParam);
 
-      setCurrentPage('deeplink');
-    }
+          setCurrentDropId(webStartParam);
+
+          dropStore.incrementClickCount?.(webStartParam);
+
+          setCurrentPage('deeplink');
+          setInitialized(true);
+          return;
+        }
+
+        setInitialized(true);
+      } catch (error) {
+        console.error('Deep link detection failed:', error);
+        setInitialized(true);
+      }
+    };
+
+    const timer = setTimeout(detectDeepLink, 300);
+
+    return () => clearTimeout(timer);
   }, [tg]);
 
   const handleNavigation = (page, params = null) => {
@@ -55,6 +77,10 @@ export default function App() {
       behavior: 'smooth'
     });
   };
+
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <Providers>

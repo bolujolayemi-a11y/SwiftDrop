@@ -225,7 +225,7 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
 
         {claimState === 'rolling' && (
           <div className="text-center bg-zinc-950/40 px-10 py-6 border border-white/5 rounded-3xl backdrop-blur-md">
-            <p className="text-5xl font-mono font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-400 to-zinc-600">
+            <p className="text-5xl font-mono font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-white via-zinc-400 to-zinc-600">
               {drop.token === 'USDC' ? '¢' : '$'}{rollingAmount}
             </p>
           </div>

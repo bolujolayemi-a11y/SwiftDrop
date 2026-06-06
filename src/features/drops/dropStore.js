@@ -124,18 +124,26 @@ export const dropStore = {
   },
 
   // 🚀 NEW ADDITION: Increments incoming deep-link landing views instantly
-  incrementClickCount: (id) => {
-    const targetIndex = drops.findIndex(drop => drop.id === id);
-    if (targetIndex !== -1) {
-      drops[targetIndex] = {
-        ...drops[targetIndex],
-        analytics: {
-          ...drops[targetIndex].analytics,
-          clicks: (drops[targetIndex].analytics?.clicks || 0) + 1
-        }
-      };
-      syncStoreToDisk();
-    }
+    incrementClickCount: (id) => {
+    const drop = dropStore.getDropById(id);
+
+    if (!drop) return;
+
+    const targetIndex = drops.findIndex(
+      item => item.id === id
+    );
+
+    if (targetIndex === -1) return;
+
+    drops[targetIndex] = {
+      ...drops[targetIndex],
+      analytics: {
+        ...drops[targetIndex].analytics,
+        clicks: (drops[targetIndex].analytics?.clicks || 0) + 1
+      }
+    };
+
+    syncStoreToDisk();
   },
 
   addDrop: (newDrop) => {
