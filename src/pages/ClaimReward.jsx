@@ -4,7 +4,10 @@ import { ledgerStore } from '@/features/ledger/ledgerStore';
 import { useTelegram } from '@/hooks/useTelegram';
 import Button from '@/components/ui/Button';
 import BackButton from '@/components/ui/BackButton';
-import { Gift, CheckCircle } from 'lucide-react';
+import {
+  Gift,
+  CheckCircle
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
@@ -14,15 +17,31 @@ export default function ClaimReward({ id, onNavigate }) {
   const userId = user?.id?.toString();
 
   const [state, setState] = useState('idle'); // idle | rolling | revealed
+  const [rollingAmount, setRollingAmount] = useState('0.00');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const wallet = ledgerStore.getWallet(userId);
-
   const token = drop?.token || 'USDT';
 
   // -----------------------------
-  // Check if already claimed
+  // restore after withdraw return
+  // -----------------------------
+  useEffect(() => {
+    const returnState = sessionStorage.getItem('returnFromWithdraw');
+    if (!returnState || !drop) return;
+
+    const parsed = JSON.parse(returnState);
+    sessionStorage.removeItem('returnFromWithdraw');
+
+    if (parsed?.dropId === id) {
+      setState('revealed');
+    }
+  }, [id, drop]);
+
+  // -----------------------------
+  // already claimed check
   // -----------------------------
   useEffect(() => {
     if (!drop || !userId) return;
@@ -40,14 +59,16 @@ export default function ClaimReward({ id, onNavigate }) {
   // CONFETTI
   // -----------------------------
   const fireConfetti = () => {
-    const end = Date.now() + 1000;
+    const end = Date.now() + 1200;
 
     const frame = () => {
       confetti({
-        particleCount: 5,
-        spread: 60,
+        particleCount: 6,
+        spread: 70,
+        startVelocity: 35,
         gravity: 0.9,
-        origin: { x: Math.random(), y: Math.random() * 0.4 }
+        ticks: 200,
+        origin: { x: Math.random(), y: Math.random() * 0.5 }
       });
 
       if (Date.now() < end) requestAnimationFrame(frame);
@@ -57,55 +78,59 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // CLAIM LOGIC
+  // CLAIM
   // -----------------------------
   const handleClaim = () => {
     if (state !== 'idle') return;
+    if (!userId || !drop) return;
 
     if (dropStore.hasUserClaimed(userId, drop.id)) return;
 
     triggerHaptic('impact');
     setState('rolling');
 
-    const fake = [
-      'Connecting to pool...',
-      'Checking eligibility...',
-      'Allocating reward...',
-      'Finalizing...'
+    const fakeStatuses = [
+      'Connecting to reward pool...',
+      'Scanning slots...',
+      'Verifying eligibility...',
+      'Finalizing allocation...'
     ];
 
     let i = 0;
-    const interval = setInterval(() => {
-      setStatus(fake[i % fake.length]);
+    const statusInterval = setInterval(() => {
+      setStatus(fakeStatuses[i % fakeStatuses.length]);
       i++;
     }, 500);
 
-    const rolling = setInterval(() => {
-      setAmount((Math.random() * 50 + 1).toFixed(2));
+    const rollInterval = setInterval(() => {
+      setRollingAmount((Math.random() * 50 + 1).toFixed(2));
     }, 80);
 
     setTimeout(() => {
-      clearInterval(interval);
-      clearInterval(rolling);
+      clearInterval(statusInterval);
+      clearInterval(rollInterval);
 
       const result = dropStore.claimDrop(drop.id, {
         userId,
         username: user?.username || 'user'
       });
 
-      if (!result.success) {
+      if (!result?.success) {
         setState('idle');
         return;
       }
 
-      setAmount(result.amountClaimed);
+      const finalAmount = result.amountClaimed;
 
+      setAmount(finalAmount);
+
+      // ✅ ledger record
       ledgerStore.addEvent({
         type: 'claim',
         userId,
         username: user?.username || 'user',
         dropId: drop.id,
-        amount: result.amountClaimed,
+        amount: finalAmount,
         token,
         timestamp: Date.now()
       });
@@ -117,36 +142,55 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // WITHDRAW LOGIC (PARTIAL)
+  // WITHDRAW (SwiftyEx BOT)
   // -----------------------------
   const handleWithdraw = () => {
     if (!amount || parseFloat(amount) <= 0) return;
 
-    if (parseFloat(amount) > wallet.balance) {
+    const currentBalance = wallet.balance;
+
+    if (parseFloat(amount) > currentBalance) {
       alert('Insufficient balance');
       return;
     }
 
-    ledgerStore.addEvent({
-      type: 'withdraw',
-      userId,
-      username: user?.username || 'user',
-      amount,
-      token,
-      dropId: drop.id,
-      status: 'initiated',
-      timestamp: Date.now()
-    });
+    setIsWithdrawing(true);
 
-    const botUrl = 'https://t.me/SwiftyEx_bot';
+    setTimeout(() => {
+      setIsWithdrawing(false);
 
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.openTelegramLink(botUrl);
-    } else {
-      window.open(botUrl, '_blank');
-    }
+      // ✅ ledger withdraw event
+      ledgerStore.addEvent({
+        type: 'withdraw',
+        userId,
+        username: user?.username || 'user',
+        dropId: drop.id,
+        amount,
+        token,
+        status: 'initiated',
+        timestamp: Date.now()
+      });
 
-    onNavigate('wallet');
+      const botUrl = 'https://t.me/SwiftyEx_bot';
+
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openTelegramLink(botUrl);
+      } else {
+        window.open(botUrl, '_blank');
+      }
+
+      sessionStorage.setItem(
+        'returnFromWithdraw',
+        JSON.stringify({
+          dropId: id,
+          page: 'claim'
+        })
+      );
+
+      setTimeout(() => {
+        onNavigate('home');
+      }, 200);
+    }, 1200);
   };
 
   if (!drop) {
@@ -163,7 +207,7 @@ export default function ClaimReward({ id, onNavigate }) {
 
       <BackButton onBack={() => onNavigate('home')} />
 
-      {/* WALLET MINI */}
+      {/* WALLET PREVIEW */}
       {state === 'revealed' && (
         <div className="text-xs p-3 bg-zinc-900 border rounded-xl">
           💰 Balance: {wallet.balance.toFixed(2)} {token}
@@ -181,7 +225,7 @@ export default function ClaimReward({ id, onNavigate }) {
         </div>
       )}
 
-      {/* CLAIM BUTTON */}
+      {/* CLAIM UI */}
       <div className="flex justify-center my-8">
         {state === 'idle' && (
           <div
@@ -212,21 +256,13 @@ export default function ClaimReward({ id, onNavigate }) {
 
       {/* ACTIONS */}
       {state === 'revealed' && (
-        <div className="space-y-2">
-
-          <Button onClick={() => onNavigate('wallet')}>
-            View Wallet
-          </Button>
-
-          <Button onClick={() => onNavigate('earnings')}>
-            Earnings History
-          </Button>
-
-          <Button onClick={handleWithdraw}>
-            Withdraw to SwiftyEx
-          </Button>
-
-        </div>
+        <button
+          onClick={handleWithdraw}
+          disabled={isWithdrawing}
+          className="w-full py-3 bg-green-500 text-black font-bold rounded-xl"
+        >
+          {isWithdrawing ? 'Processing...' : 'Withdraw to SwiftyEx'}
+        </button>
       )}
 
     </div>
