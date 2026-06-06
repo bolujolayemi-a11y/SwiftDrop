@@ -12,6 +12,9 @@ import Leaderboard from '@/pages/Leaderboard';
 import UserGuide from '@/pages/UserGuide';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import DeepLink from '@/pages/DeepLink';
+import WalletOverview from '@/pages/WalletOverview';
+import EarningsHistory from '@/pages/EarningsHistory';
+import Withdrawals from '@/pages/Withdrawals';
 
 export default function Router({
   currentPage,
@@ -36,59 +39,38 @@ export default function Router({
       return <Dashboard {...commonProps} />;
 
     case 'details':
-      return (
-        <DropDetails
-          id={currentDropId}
-          {...commonProps}
-        />
-      );
+      return <DropDetails id={currentDropId} {...commonProps} />;
 
     case 'claim':
-      return (
-        <ClaimReward
-          id={currentDropId}
-          {...commonProps}
-        />
-      );
+      return <ClaimReward id={currentDropId} {...commonProps} />;
 
     case 'deeplink':
-      return (
-        <DeepLink
-          id={currentDropId}
-          onNavigate={onNavigate}
-        />
-      );
+      return <DeepLink id={currentDropId} onNavigate={onNavigate} />;
 
     case 'verify-action':
     case 'verify':
-      return (
-        <VerifyAction
-          id={currentDropId}
-          onNavigate={onNavigate}
-        />
-      );
+      return <VerifyAction id={currentDropId} onNavigate={onNavigate} />;
 
     case 'analytics':
-      return (
-        <CampaignAnalytics
-          id={currentDropId}
-          onNavigate={onNavigate}
-        />
-      );
+      return <CampaignAnalytics id={currentDropId} onNavigate={onNavigate} />;
 
     case 'gatekeeper':
-      return (
-        <Gatekeeper
-          id={currentDropId}
-          {...commonProps}
-        />
-      );
+      return <Gatekeeper id={currentDropId} {...commonProps} />;
 
     case 'guide':
       return <UserGuide onNavigate={onNavigate} />;
 
     case 'privacy':
       return <PrivacyPolicy onNavigate={onNavigate} />;
+
+    case 'wallet':
+      return <WalletOverview {...commonProps} />;
+
+    case 'earnings':
+      return <EarningsHistory {...commonProps} />;
+
+    case 'withdrawals':
+      return <Withdrawals {...commonProps} />;
 
     case 'leaderboard':
       return (

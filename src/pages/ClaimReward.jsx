@@ -5,40 +5,39 @@ import Button from '@/components/ui/Button';
 import BackButton from '@/components/ui/BackButton';
 import {
   Gift,
-  Sparkles,
-  CheckCircle,
-  ArrowUpRight,
-  UserPlus,
-  BarChart3
+  CheckCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { ledgerStore } from '@/features/ledger/ledgerStore';
 
-export default function ClaimReward({ id, onNavigate, setDropId }) {
+export default function ClaimReward({ id, onNavigate }) {
   const { user, triggerHaptic } = useTelegram();
   const drop = dropStore.getDropById(id);
 
-  const [claimState, setClaimState] = useState('idle');
+  const [claimState, setClaimState] = useState('idle'); // idle | rolling | revealed
   const [rollingAmount, setRollingAmount] = useState('0.00');
   const [revealedAmount, setRevealedAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [statusText, setStatusText] = useState('');
 
+  const userId = user?.id?.toString() || 'guest';
+
+  // ✅ Check if already claimed
   useEffect(() => {
     if (!drop) return;
 
-    const userId = user?.id?.toString() || 'guest';
-    const hasAlreadyClaimed = dropStore.hasUserClaimed(userId, drop.id);
+    const hasClaimed = dropStore.hasUserClaimed(userId, drop.id);
 
-    if (hasAlreadyClaimed) {
-      const pastClaimLog = drop.claimsList?.find(
-        log => log.username === user?.username || log.userId === userId
+    if (hasClaimed) {
+      const past = drop.claimsList?.find(
+        c => c.userId === userId || c.username === user?.username
       );
 
-      setRevealedAmount(pastClaimLog?.amount || drop.amount || '0.00');
+      setRevealedAmount(past?.amount || drop.amount || '0.00');
       setClaimState('revealed');
     }
-  }, [id, user, drop]);
+  }, [drop, userId]);
 
   const shortDescription =
     drop?.description?.length > 140
@@ -76,8 +75,6 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
   const executeClaimSequence = () => {
     if (claimState !== 'idle') return;
 
-    const userId = user?.id?.toString() || 'guest';
-
     if (dropStore.hasUserClaimed(userId, drop.id)) return;
 
     triggerHaptic('impact');
@@ -101,8 +98,8 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
     }, 80);
 
     setTimeout(() => {
-      clearInterval(numberInterval);
       clearInterval(statusInterval);
+      clearInterval(numberInterval);
 
       const result = dropStore.claimDrop(drop.id, {
         userId,
@@ -114,7 +111,20 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
         return;
       }
 
-      setRevealedAmount(result.amountClaimed);
+      const amount = result.amountClaimed;
+
+      setRevealedAmount(amount);
+
+      ledgerStore.addEvent({
+        type: 'claim',
+        userId,
+        username: user?.username || 'anonymous',
+        dropId: drop.id,
+        amount,
+        token: drop.token,
+        timestamp: Date.now()
+      });
+
       setClaimState('revealed');
       triggerHaptic('success');
       triggerConfetti();
@@ -122,12 +132,26 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
   };
 
   const handleFlashWithdraw = () => {
+    if (isWithdrawing) return;
+
     setIsWithdrawing(true);
     triggerHaptic('impact');
 
     setTimeout(() => {
       setIsWithdrawing(false);
       setWithdrawSuccess(true);
+
+      // ✅ LEDGER: WITHDRAW EVENT
+      ledgerStore.addEvent({
+        type: 'withdraw',
+        userId,
+        username: user?.username || 'anonymous',
+        dropId: drop.id,
+        amount: revealedAmount,
+        token: drop.token,
+        status: 'initiated',
+        timestamp: Date.now()
+      });
 
       setTimeout(() => {
         const botUrl = `https://t.me/SwiftyEx_bot`;
@@ -138,15 +162,17 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
           window.open(botUrl, '_blank');
         }
 
-        // IMPORTANT FIX (see explanation below)
-        sessionStorage.setItem('returnFromWithdraw', JSON.stringify({
-        dropId: id,
-        page: 'claim'
-      }));
+        sessionStorage.setItem(
+          'returnFromWithdraw',
+          JSON.stringify({
+            dropId: id,
+            page: 'claim'
+          })
+        );
 
-      setTimeout(() => {
-        onNavigate('home');
-      }, 150);
+        setTimeout(() => {
+          onNavigate('home');
+        }, 150);
       }, 1200);
     }, 1500);
   };
@@ -158,12 +184,9 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
 
       <div className="text-center space-y-3">
         <h2 className="text-2xl font-black text-white">
-          {claimState === 'revealed'
-            ? 'Reward Unlocked!'
-            : drop.title}
+          {claimState === 'revealed' ? 'Reward Unlocked!' : drop.title}
         </h2>
 
-        {/* ✅ DROP DESCRIPTION ADDED HERE */}
         {claimState === 'idle' && shortDescription && (
           <p className="text-xs text-zinc-400 max-w-md mx-auto">
             {shortDescription}
