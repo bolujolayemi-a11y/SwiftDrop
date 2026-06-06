@@ -13,24 +13,34 @@ export default function App() {
   const [currentDropId, setCurrentDropId] = useState(null);
   const [routeParams, setRouteParams] = useState(null);
   const [initialized, setInitialized] = useState(false);
-  const returnState = sessionStorage.getItem('returnFromWithdraw');
-
-if (returnState) {
-  const parsed = JSON.parse(returnState);
-
-  sessionStorage.removeItem('returnFromWithdraw');
-
-  if (parsed?.dropId) {
-    setCurrentDropId(parsed.dropId);
-    setCurrentPage(parsed.page || 'claim'); // 👈 THIS IS THE KEY FIX
-    setInitialized(true);
-    return;
-  }
-}
 
   useEffect(() => {
-    const detectDeepLink = () => {
+    const initApp = () => {
       try {
+        /**
+         * =========================
+         * 1. HANDLE RETURN FROM WITHDRAW FIRST (HIGHEST PRIORITY)
+         * =========================
+         */
+        const returnState = sessionStorage.getItem('returnFromWithdraw');
+
+        if (returnState) {
+          const parsed = JSON.parse(returnState);
+          sessionStorage.removeItem('returnFromWithdraw');
+
+          if (parsed?.dropId) {
+            setCurrentDropId(parsed.dropId);
+            setCurrentPage(parsed.page || 'claim');
+            setInitialized(true);
+            return;
+          }
+        }
+
+        /**
+         * =========================
+         * 2. HANDLE TELEGRAM DEEP LINK
+         * =========================
+         */
         const webApp = window.Telegram?.WebApp;
 
         const startParam =
@@ -45,6 +55,11 @@ if (returnState) {
           return;
         }
 
+        /**
+         * =========================
+         * 3. HANDLE WEB URL PARAMS
+         * =========================
+         */
         const urlParams = new URLSearchParams(window.location.search);
 
         const webStartParam =
@@ -59,21 +74,21 @@ if (returnState) {
           return;
         }
 
+        
         setInitialized(true);
       } catch (err) {
-        console.error('Deep link error:', err);
+        console.error('App init error:', err);
         setInitialized(true);
       }
     };
 
-    const timer = setTimeout(detectDeepLink, 300);
+    const timer = setTimeout(initApp, 300);
     return () => clearTimeout(timer);
   }, [tg]);
 
   const handleNavigation = (page, params = null) => {
     setCurrentPage(page);
     setRouteParams(params);
-
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

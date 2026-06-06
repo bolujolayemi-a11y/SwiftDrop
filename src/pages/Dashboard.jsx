@@ -11,10 +11,7 @@ import {
   BarChart2,
   Eye,
   Calendar,
-  UserCheck,
-  Wallet,
-  TrendingUp,
-  Banknote
+  UserCheck
 } from 'lucide-react';
 
 export default function Dashboard({ onNavigate, setDropId }) {
@@ -23,13 +20,18 @@ export default function Dashboard({ onNavigate, setDropId }) {
   const [expandedAnalytics, setExpandedAnalytics] = useState({});
 
   useEffect(() => {
-    return dropStore.subscribe((updated) => setActiveDrops(updated));
+    const unsubscribe = dropStore.subscribe((updated) => {
+      setActiveDrops(updated);
+    });
+
+    return unsubscribe;
   }, []);
 
   const toggleAnalytics = (id, e) => {
     e.stopPropagation();
     triggerHaptic('light');
-    setExpandedAnalytics(prev => ({
+
+    setExpandedAnalytics((prev) => ({
       ...prev,
       [id]: !prev[id]
     }));
@@ -39,18 +41,16 @@ export default function Dashboard({ onNavigate, setDropId }) {
     e.stopPropagation();
     triggerHaptic('warning');
 
-    if (window.confirm("Are you sure you want to delete this campaign?")) {
-      if (dropStore.deleteDrop) {
-        dropStore.deleteDrop(id);
-      } else {
-        dropStore.drops = dropStore.drops.filter(d => d.id !== id);
-        dropStore.notifySubscribers?.();
-      }
+    if (window.confirm('Are you sure you want to delete this campaign?')) {
+      dropStore.deleteDrop(id);
       triggerHaptic('success');
     }
   };
 
-  const totalClaims = activeDrops.reduce((acc, d) => acc + (d.claimedCount || 0), 0);
+  const totalClaims = activeDrops.reduce(
+    (acc, d) => acc + (d.claimedCount || 0),
+    0
+  );
 
   return (
     <div className="space-y-5 pt-2 animate-reveal text-zinc-100">
@@ -60,7 +60,10 @@ export default function Dashboard({ onNavigate, setDropId }) {
         <BackButton onBack={() => onNavigate('home')} fallbackText="Back" />
 
         <button
-          onClick={() => { triggerHaptic('impact'); onNavigate('create'); }}
+          onClick={() => {
+            triggerHaptic('impact');
+            onNavigate('create');
+          }}
           className="h-9 px-3 bg-brand-accent text-white rounded-xl flex items-center gap-2 text-xs font-bold"
         >
           <Plus className="h-4 w-4" />
@@ -69,43 +72,46 @@ export default function Dashboard({ onNavigate, setDropId }) {
       </div>
 
       {/* USER HEADER */}
-      <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
-        <div className="flex items-center gap-3">
-          <img
-            src={user?.photo_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150"}
-            className="h-12 w-12 rounded-2xl object-cover border border-zinc-800"
-          />
-          <div>
-            <h2 className="text-lg font-bold">Dashboard</h2>
-            <p className="text-xs text-zinc-500">@{user?.username || 'user'}</p>
-          </div>
+      <div className="flex items-center gap-3 border-b border-zinc-900 pb-4">
+        <img
+          src={
+            user?.photo_url ||
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150'
+          }
+          className="h-12 w-12 rounded-2xl object-cover border border-zinc-800"
+          alt="user"
+        />
+
+        <div>
+          <h2 className="text-lg font-bold">Dashboard</h2>
+          <p className="text-xs text-zinc-500">
+            @{user?.username || 'user'}
+          </p>
         </div>
       </div>
 
-      {/* 🔥 QUICK ACTIONS (NEW) */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* QUICK ACTIONS (FIXED) */}
+      <div className="grid grid-cols-2 gap-2">
         <button
-          onClick={() => onNavigate('wallet')}
+          onClick={() => {
+            triggerHaptic('impact');
+            onNavigate('create');
+          }}
           className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-bold flex flex-col items-center gap-1"
         >
-          <Wallet className="h-4 w-4 text-blue-400" />
-          Wallet
+          <Plus className="h-4 w-4" />
+          Create Drop
         </button>
 
         <button
-          onClick={() => onNavigate('earnings')}
+          onClick={() => {
+            triggerHaptic('impact');
+            onNavigate('analytics');
+          }}
           className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-bold flex flex-col items-center gap-1"
         >
-          <TrendingUp className="h-4 w-4 text-green-400" />
-          Earnings
-        </button>
-
-        <button
-          onClick={() => onNavigate('withdrawals')}
-          className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-bold flex flex-col items-center gap-1"
-        >
-          <Banknote className="h-4 w-4 text-amber-400" />
-          Withdrawals
+          <BarChart2 className="h-4 w-4" />
+          Analytics
         </button>
       </div>
 
@@ -130,7 +136,9 @@ export default function Dashboard({ onNavigate, setDropId }) {
 
       {/* CAMPAIGNS */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-zinc-400 uppercase">Your Campaigns</h3>
+        <h3 className="text-xs font-bold text-zinc-400 uppercase">
+          Your Campaigns
+        </h3>
 
         {activeDrops.length === 0 ? (
           <div className="text-center py-10 text-zinc-500 text-xs">
@@ -140,7 +148,10 @@ export default function Dashboard({ onNavigate, setDropId }) {
           activeDrops.map((drop) => (
             <div
               key={drop.id}
-              onClick={() => { setDropId(drop.id); onNavigate('details'); }}
+              onClick={() => {
+                setDropId(drop.id);
+                onNavigate('details');
+              }}
               className="p-4 rounded-xl bg-zinc-900/20 border border-zinc-800 space-y-3 cursor-pointer"
             >
 
@@ -158,7 +169,10 @@ export default function Dashboard({ onNavigate, setDropId }) {
                     {drop.amount} {drop.token}
                   </p>
                   <p className="text-[10px] text-green-400">
-                    {Math.round((drop.claimedCount / drop.winnersCount) * 100)}% claimed
+                    {Math.round(
+                      (drop.claimedCount / drop.winnersCount) * 100
+                    ) || 0}
+                    % claimed
                   </p>
                 </div>
               </div>
@@ -195,7 +209,9 @@ export default function Dashboard({ onNavigate, setDropId }) {
 
                   <div>
                     <Calendar className="h-3 w-3 text-amber-400" />
-                    <p>{drop.winnersCount - drop.claimedCount} left</p>
+                    <p>
+                      {(drop.winnersCount || 0) - (drop.claimedCount || 0)} left
+                    </p>
                   </div>
                 </div>
               )}
