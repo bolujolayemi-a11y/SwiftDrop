@@ -38,31 +38,29 @@ export const ledgerStore = {
   },
 
   
-  getWallet: (userId) => {
-    const userEvents = events.filter(e => e.userId === userId);
+    getWallet: (userId) => {
+    if (!userId) {
+        return { earnings: 0, withdrawals: 0, balance: 0 };
+    }
 
-    const tokens = ['USDT', 'USDC'];
+    const safeEvents = Array.isArray(events) ? events : [];
 
-    const wallet = {};
+    const earnings = safeEvents
+        .filter(e => e.userId === userId && e.type === 'claim')
+        .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-    tokens.forEach(token => {
-      const earnings = userEvents
-        .filter(e => e.type === 'claim' && e.token === token)
-        .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const withdrawals = safeEvents
+        .filter(e => e.userId === userId && e.type === 'withdraw')
+        .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
-      const withdrawals = userEvents
-        .filter(e => e.type === 'withdraw' && e.token === token)
-        .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const balance = Math.max(0, earnings - withdrawals);
 
-      wallet[token] = {
-        earnings,
-        withdrawals,
-        balance: Math.max(0, earnings - withdrawals)
-      };
-    });
-
-    return wallet;
-  },
+    return {
+        earnings: Number.isFinite(earnings) ? earnings : 0,
+        withdrawals: Number.isFinite(withdrawals) ? withdrawals : 0,
+        balance: Number.isFinite(balance) ? balance : 0
+    };
+    },
 
   getEarnings: (userId, token = null) => {
     return events

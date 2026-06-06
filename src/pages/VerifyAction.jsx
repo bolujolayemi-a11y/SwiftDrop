@@ -73,7 +73,7 @@ export default function VerifyAction({ id, onNavigate }) {
     }, 1500);
   };
 
-  const handleVerifySubmission = () => {
+    const handleVerifySubmission = () => {
     if (needsTrivia && selectedOption === null) return;
     if (!hasShared) return;
 
@@ -86,11 +86,21 @@ export default function VerifyAction({ id, onNavigate }) {
     triggerHaptic('success');
     setErrorStatus(false);
 
-    // 🧼 Clean up the specific storage caches on successful completion
+    // cleanup
     localStorage.removeItem(storageKeys.trivia);
     localStorage.removeItem(storageKeys.share);
 
-    onNavigate('claim'); 
+    // ✅ SAVE VERIFICATION STATE
+    sessionStorage.setItem(
+      `swifty_verified_${id}`,
+      JSON.stringify({
+        dropId: id,
+        verified: true,
+        timestamp: Date.now()
+      })
+    );
+
+    onNavigate('claim');
   };
 
   const isButtonDisabled = (needsTrivia && selectedOption === null) || !hasShared;

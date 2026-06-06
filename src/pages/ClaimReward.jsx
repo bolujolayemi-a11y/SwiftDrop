@@ -4,10 +4,7 @@ import { ledgerStore } from '@/features/ledger/ledgerStore';
 import { useTelegram } from '@/hooks/useTelegram';
 import Button from '@/components/ui/Button';
 import BackButton from '@/components/ui/BackButton';
-import {
-  Gift,
-  CheckCircle
-} from 'lucide-react';
+import { Gift, CheckCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
@@ -17,34 +14,38 @@ export default function ClaimReward({ id, onNavigate }) {
   const userId = user?.id?.toString();
 
   const [state, setState] = useState('idle'); // idle | rolling | revealed
-  const [rollingAmount, setRollingAmount] = useState('0.00');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  const wallet = ledgerStore.getWallet(userId);
   const token = drop?.token || 'USDT';
 
-  // -----------------------------
-  // restore after withdraw return
-  // -----------------------------
-  useEffect(() => {
-    const returnState = sessionStorage.getItem('returnFromWithdraw');
-    if (!returnState || !drop) return;
+  const wallet = ledgerStore.getWallet(userId) || {
+    balance: 0,
+    earnings: 0,
+    withdrawals: 0
+  };
 
-    const parsed = JSON.parse(returnState);
-    sessionStorage.removeItem('returnFromWithdraw');
-
-    if (parsed?.dropId === id) {
-      setState('revealed');
+  // -----------------------------
+  // CHECK VERIFICATION
+  // -----------------------------
+  const isVerified = (() => {
+    try {
+      const data = sessionStorage.getItem(`swifty_verified_${id}`);
+      return data ? JSON.parse(data).verified : false;
+    } catch {
+      return false;
     }
-  }, [id, drop]);
+  })();
 
-  // -----------------------------
-  // already claimed check
-  // -----------------------------
   useEffect(() => {
     if (!drop || !userId) return;
+
+    // 🚨 force verify step if required
+    if (drop.trivia && !isVerified) {
+      onNavigate('verify');
+      return;
+    }
 
     const hasClaimed = dropStore.hasUserClaimed(userId, drop.id);
 
@@ -59,16 +60,14 @@ export default function ClaimReward({ id, onNavigate }) {
   // CONFETTI
   // -----------------------------
   const fireConfetti = () => {
-    const end = Date.now() + 1200;
+    const end = Date.now() + 1000;
 
     const frame = () => {
       confetti({
-        particleCount: 6,
-        spread: 70,
-        startVelocity: 35,
+        particleCount: 5,
+        spread: 60,
         gravity: 0.9,
-        ticks: 200,
-        origin: { x: Math.random(), y: Math.random() * 0.5 }
+        origin: { x: Math.random(), y: Math.random() * 0.4 }
       });
 
       if (Date.now() < end) requestAnimationFrame(frame);
@@ -78,11 +77,17 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // CLAIM
+  // CLAIM LOGIC
   // -----------------------------
   const handleClaim = () => {
     if (state !== 'idle') return;
     if (!userId || !drop) return;
+
+    // 🔐 block if not verified
+    if (drop.trivia && !isVerified) {
+      onNavigate('verify');
+      return;
+    }
 
     if (dropStore.hasUserClaimed(userId, drop.id)) return;
 
@@ -103,7 +108,7 @@ export default function ClaimReward({ id, onNavigate }) {
     }, 500);
 
     const rollInterval = setInterval(() => {
-      setRollingAmount((Math.random() * 50 + 1).toFixed(2));
+      setAmount((Math.random() * 50 + 1).toFixed(2));
     }, 80);
 
     setTimeout(() => {
@@ -124,7 +129,6 @@ export default function ClaimReward({ id, onNavigate }) {
 
       setAmount(finalAmount);
 
-      // ✅ ledger record
       ledgerStore.addEvent({
         type: 'claim',
         userId,
@@ -142,14 +146,14 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // WITHDRAW (SwiftyEx BOT)
+  // WITHDRAW LOGIC
   // -----------------------------
   const handleWithdraw = () => {
     if (!amount || parseFloat(amount) <= 0) return;
 
-    const currentBalance = wallet.balance;
+    const balance = wallet?.balance ?? 0;
 
-    if (parseFloat(amount) > currentBalance) {
+    if (parseFloat(amount) > balance) {
       alert('Insufficient balance');
       return;
     }
@@ -159,7 +163,6 @@ export default function ClaimReward({ id, onNavigate }) {
     setTimeout(() => {
       setIsWithdrawing(false);
 
-      // ✅ ledger withdraw event
       ledgerStore.addEvent({
         type: 'withdraw',
         userId,
@@ -187,9 +190,7 @@ export default function ClaimReward({ id, onNavigate }) {
         })
       );
 
-      setTimeout(() => {
-        onNavigate('home');
-      }, 200);
+      setTimeout(() => onNavigate('home'), 200);
     }, 1200);
   };
 
@@ -210,7 +211,7 @@ export default function ClaimReward({ id, onNavigate }) {
       {/* WALLET PREVIEW */}
       {state === 'revealed' && (
         <div className="text-xs p-3 bg-zinc-900 border rounded-xl">
-          💰 Balance: {wallet.balance.toFixed(2)} {token}
+          💰 Balance: {(wallet?.balance ?? 0).toFixed(2)} {token}
         </div>
       )}
 
@@ -218,10 +219,10 @@ export default function ClaimReward({ id, onNavigate }) {
         {state === 'revealed' ? 'Reward Unlocked' : drop.title}
       </h2>
 
-      {/* TRIVIA SUPPORT */}
+      {/* TRIVIA INFO */}
       {drop.trivia && state === 'idle' && (
         <div className="p-3 text-xs bg-zinc-900 border rounded-xl text-zinc-300">
-          🧠 Trivia: {drop.trivia.question}
+          🧠 {drop.trivia.question}
         </div>
       )}
 
@@ -264,7 +265,6 @@ export default function ClaimReward({ id, onNavigate }) {
           {isWithdrawing ? 'Processing...' : 'Withdraw to SwiftyEx'}
         </button>
       )}
-
     </div>
   );
 }
