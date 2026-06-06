@@ -53,7 +53,7 @@ export default function CreateDrop({ onNavigate }) {
             content: `You are an expert Web3 conversion growth hacker. You must respond with a raw, valid JSON object matching this exact schema with absolutely no formatting, markdown code blocks, or conversational text outside the JSON parameters:
             {
               "title": "Short catchy headline string with an emoji",
-              "description": "Clear verification steps string written contextually for claimers.",
+              "description": "A punchy, high-converting, single-paragraph campaign call-to-action. Do NOT use sequential lists, numbers, bullet points, or step-by-step formats (e.g., avoid writing 'Step 1', 'Step 2', etc.). Write it as a smooth, continuous, exciting description that tells the claimer contextually what they are participating in and how to lock in their reward.",
               "amount": "Recommended total distribution pool size string (e.g., '150.00')",
               "winnersCount": "Recommended available claim slots string (e.g., '25')",
               "token": "Must be either 'USDT' or 'USDC' based on semantic indicators in the prompt (default to 'USDT')",

@@ -5,7 +5,7 @@ import BackButton from '@/components/ui/BackButton';
 import { dropStore } from '@/features/drops/dropStore';
 import { Share2, Wallet, Users, Info } from 'lucide-react';
 
-export default function DropDetails({ id, onNavigate }) {
+export default function DropDetails({ id, onNavigate, setDropId }) {
   const drop = dropStore.getDropById(id);
 
   if (!drop) {
@@ -17,7 +17,7 @@ export default function DropDetails({ id, onNavigate }) {
     );
   }
 
-  // 🚀 UPGRADED: High-Fidelity Viral Share Mechanism
+  // 🚀 High-Fidelity Viral Share Mechanism
   const handleShareCampaign = () => {
     const appUrl = `https://t.me/swift_dropbot/app?startapp=${drop.id}`;
     const rawText = `🎁 Grab your share of the ${drop.title} reward pool instantly on SwiftDrop!`;
@@ -80,8 +80,13 @@ export default function DropDetails({ id, onNavigate }) {
         </div>
 
         <div className="space-y-2 pt-2">
-          {/* 🚀 FIXED PIPELINE: Routes strictly to verify-action first to fire verification rules before claim slots */}
-          <Button onClick={() => onNavigate('verify-action')}>
+          {/* 🚀 FIXED PIPELINE: Secure context parameters before jumping routes */}
+          <Button 
+            onClick={() => {
+              if (typeof setDropId === 'function') setDropId(drop.id);
+              onNavigate('verify-action');
+            }}
+          >
             Go to Verification Tasks
           </Button>
           

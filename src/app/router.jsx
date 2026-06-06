@@ -23,12 +23,16 @@ export default function Router({ currentPage, onNavigate, currentDropId, setDrop
     case 'dashboard':
       return <Dashboard onNavigate={onNavigate} setDropId={setDropId} />;
       
+    // 🚀 FIXED: Injected setDropId so inner links can handle deep param caching loops safely
     case 'details':
-      return <DropDetails id={currentDropId} onNavigate={onNavigate} />;
+      return <DropDetails id={currentDropId} onNavigate={onNavigate} setDropId={setDropId} />;
       
+    // 🚀 FIXED: Injected setDropId to persist drop context when a user jumps out to look at the global leaderboard
     case 'claim':
-      return <ClaimReward id={currentDropId} onNavigate={onNavigate} />;
+      return <ClaimReward id={currentDropId} onNavigate={onNavigate} setDropId={setDropId} />;
       
+    // 🚀 FIXED: Updated to match your 'verify-action' routing state naming token used inside App.jsx and DropDetails.jsx
+    case 'verify-action':
     case 'verify':
       return <VerifyAction id={currentDropId} onNavigate={onNavigate} />;
       
@@ -44,7 +48,6 @@ export default function Router({ currentPage, onNavigate, currentDropId, setDrop
     case 'privacy':
       return <PrivacyPolicy onNavigate={onNavigate} />;
     
-
     // 🏆 Leaderboard State Stack: Contextually bound to the claim instance it branched from
     case 'leaderboard':
       return (
@@ -54,7 +57,6 @@ export default function Router({ currentPage, onNavigate, currentDropId, setDrop
           params={params} 
         />
       );
-      
       
     default:
       return <Home onNavigate={onNavigate} setDropId={setDropId} />;

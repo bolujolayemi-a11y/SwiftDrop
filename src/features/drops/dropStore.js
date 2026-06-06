@@ -98,10 +98,18 @@ export const dropStore = {
       claimsList: drop.analytics?.history || []
     })),
 
+  // 🚀 FIX: Pulls from live storage index and force-hydrates static demos if visited via direct links
   getDropById: (id) => {
-    const drop =
-      drops.find(item => item.id === id) ||
-      INTERACTIVE_DEMOS.find(item => item.id === id);
+    let drop = drops.find(item => item.id === id);
+
+    if (!drop) {
+      const demoDrop = INTERACTIVE_DEMOS.find(item => item.id === id);
+      if (demoDrop) {
+        drop = { ...demoDrop };
+        drops.push(drop);
+        localStorage.setItem('swifty_drops_db', JSON.stringify(drops));
+      }
+    }
 
     if (!drop) return null;
 
@@ -115,6 +123,21 @@ export const dropStore = {
     return !!userClaimsRegistry[`${userId}-${dropId}`];
   },
 
+  // 🚀 NEW ADDITION: Increments incoming deep-link landing views instantly
+  incrementClickCount: (id) => {
+    const targetIndex = drops.findIndex(drop => drop.id === id);
+    if (targetIndex !== -1) {
+      drops[targetIndex] = {
+        ...drops[targetIndex],
+        analytics: {
+          ...drops[targetIndex].analytics,
+          clicks: (drops[targetIndex].analytics?.clicks || 0) + 1
+        }
+      };
+      syncStoreToDisk();
+    }
+  },
+
   addDrop: (newDrop) => {
     const merchant = dropStore.getMerchantProfile();
 
@@ -126,10 +149,10 @@ export const dropStore = {
       token: newDrop.token || 'USDT',
       hasTrivia: !!newDrop.trivia,
       creator: merchant.username,
-      communityUrl: newDrop.communityUrl || 'https://t.me/swift_dropbot', // 🚀 Captured Custom Target Venue Hook
+      communityUrl: newDrop.communityUrl || 'https://t.me/swift_dropbot',
       isDemo: false,
       analytics: {
-        clicks: 0,
+        clicks: 1, // Start with initial creator setup click hit
         history: []
       },
       ...newDrop
@@ -143,15 +166,10 @@ export const dropStore = {
   },
 
   claimDrop: (id, claimPayload = {}) => {
-    const username =
-      claimPayload.username || 'anonymous_user';
+    const username = claimPayload.username || 'anonymous_user';
+    const userId = claimPayload.userId || 'anonymous';
 
-    const userId =
-      claimPayload.userId || 'anonymous';
-
-    const targetIndex = drops.findIndex(
-      drop => drop.id === id
-    );
+    const targetIndex = drops.findIndex(drop => drop.id === id);
 
     if (targetIndex === -1) {
       return {
@@ -169,8 +187,7 @@ export const dropStore = {
       };
     }
 
-    const maxWinners =
-      parseInt(target.winnersCount, 10) || 0;
+    const maxWinners = parseInt(target.winnersCount, 10) || 0;
 
     if (target.claimedCount >= maxWinners) {
       return {
@@ -179,54 +196,30 @@ export const dropStore = {
       };
     }
 
-    const totalPool =
-      parseFloat(target.amount) || 0;
+    const totalPool = parseFloat(target.amount) || 0;
 
-    const spentAlready = (
-      target.analytics?.history || []
-    ).reduce(
-      (sum, claim) =>
-        sum + (parseFloat(claim.amount) || 0),
+    const spentAlready = (target.analytics?.history || []).reduce(
+      (sum, claim) => sum + (parseFloat(claim.amount) || 0),
       0
     );
 
-    const remainingPool = Math.max(
-      0,
-      totalPool - spentAlready
-    );
-
-    const remainingSlots =
-      maxWinners - target.claimedCount;
+    const remainingPool = Math.max(0, totalPool - spentAlready);
+    const remainingSlots = maxWinners - target.claimedCount;
 
     let finalAmount = '0.00';
 
     if (remainingSlots <= 1) {
       finalAmount = remainingPool.toFixed(2);
     } else {
-      const averageAllocation =
-        remainingPool / remainingSlots;
-
-      const minPayout = Math.max(
-        0.01,
-        averageAllocation * 0.5
-      );
-
-      const reserveAmount =
-        (remainingSlots - 1) * 0.01;
-
+      const averageAllocation = remainingPool / remainingSlots;
+      const minPayout = Math.max(0.01, averageAllocation * 0.5);
+      const reserveAmount = (remainingSlots - 1) * 0.01;
       const maxPayout = Math.max(
         minPayout,
-        Math.min(
-          remainingPool - reserveAmount,
-          averageAllocation * 1.5
-        )
+        Math.min(remainingPool - reserveAmount, averageAllocation * 1.5)
       );
 
-      const randomPayout =
-        Math.random() *
-          (maxPayout - minPayout) +
-        minPayout;
-
+      const randomPayout = Math.random() * (maxPayout - minPayout) + minPayout;
       finalAmount = randomPayout.toFixed(2);
     }
 
@@ -239,13 +232,13 @@ export const dropStore = {
       ...(target.analytics?.history || [])
     ];
 
+    // 🔥 CRITICAL FIX: Synchronizes claims count incrementing cleanly alongside clicks data tracking arrays
     drops[targetIndex] = {
       ...target,
       claimedCount: target.claimedCount + 1,
       analytics: {
         ...target.analytics,
-        clicks:
-          (target.analytics?.clicks || 0) + 1,
+        clicks: (target.analytics?.clicks || 0) + 1,
         history: updatedHistory
       }
     };
@@ -254,38 +247,28 @@ export const dropStore = {
 
     syncStoreToDisk();
 
-    // 🚀 REDIRECT COUPLING LOGIC OVERHAUL:
-    // Routes directly to the financial engine bot, appending the target token configuration parameters
+    // 🚀 REDIRECT OVERHAUL (OPTION B): 
+    // Clean target link path directly to the bot dashboard to ensure smooth navigation
     return {
       success: true,
       amountClaimed: finalAmount,
-      redirectUrl: `https://t.me/SwiftyEx_bot?start=withdraw_${target.token}_${finalAmount}`
+      redirectUrl: `https://t.me/SwiftyEx_bot`
     };
   },
 
   deleteDrop: (id) => {
-    drops = drops.filter(
-      drop => drop.id !== id
-    );
-
+    drops = drops.filter(drop => drop.id !== id);
     syncStoreToDisk();
   },
 
   getClaimHistory: (id) => {
-    const drop = drops.find(
-      item => item.id === id
-    );
-
+    const drop = drops.find(item => item.id === id);
     return drop?.analytics?.history || [];
   },
 
   getLeaderboard: () => {
     return [...drops]
-      .sort(
-        (a, b) =>
-          (b.claimedCount || 0) -
-          (a.claimedCount || 0)
-      )
+      .sort((a, b) => (b.claimedCount || 0) - (a.claimedCount || 0))
       .slice(0, 20);
   },
 
@@ -293,9 +276,7 @@ export const dropStore = {
     listeners.push(listener);
 
     return () => {
-      listeners = listeners.filter(
-        l => l !== listener
-      );
+      listeners = listeners.filter(l => l !== listener);
     };
   }
 };

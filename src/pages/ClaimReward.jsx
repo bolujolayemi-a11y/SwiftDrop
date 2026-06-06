@@ -33,7 +33,6 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
     const hasAlreadyClaimed = dropStore.hasUserClaimed(userId, drop.id);
     
     if (hasAlreadyClaimed) {
-      // Find the user's specific logged payout size from the history feed arrays
       const pastClaimLog = drop.claimsList?.find(
         log => log.username === user?.username || log.userId === userId
       );
@@ -157,7 +156,6 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
       triggerHaptic('success');
 
       setTimeout(() => {
-        // 🚀 OPTION B: Clean routing directly to the core bot interface canvas
         const cleanBotUrl = `https://t.me/SwiftyEx_bot`;
         
         if (window.Telegram?.WebApp) {
@@ -166,8 +164,11 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
           window.open(cleanBotUrl, '_blank');
         }
         
-        setWithdrawSuccess(false);
-        onNavigate('home');
+        // 🔄 Delayed reset ensures standard route cleanup happens post-transition
+        setTimeout(() => {
+          setWithdrawSuccess(false);
+          onNavigate('home');
+        }, 100);
       }, 1200);
     }, 1500);
   };
@@ -224,7 +225,7 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
 
         {claimState === 'rolling' && (
           <div className="text-center bg-zinc-950/40 px-10 py-6 border border-white/5 rounded-3xl backdrop-blur-md">
-            <p className="text-5xl font-mono font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-r from-white via-zinc-400 to-zinc-600">
+            <p className="text-5xl font-mono font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-400 to-zinc-600">
               {drop.token === 'USDC' ? '¢' : '$'}{rollingAmount}
             </p>
           </div>
@@ -256,7 +257,7 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
             <button
               type="button"
               onClick={handleFlashWithdraw}
-              disabled={isWithdrawing}
+              disabled={isWithdrawing || withdrawSuccess}
               className="w-full py-3.5 bg-brand-success text-black rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-green-400 cursor-pointer disabled:opacity-40 transition-all"
             >
               <span>{isWithdrawing ? 'Processing Reward...' : withdrawSuccess ? 'Successful!' : 'Withdraw to SwiftyEx'}</span>
@@ -268,7 +269,6 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
               Invite to Campaign
             </Button>
 
-            {/* 🚀 Dynamic router binding so back navigation recovers this specific profile timeline context */}
             <Button 
               variant="ghost" 
               onClick={() => {
