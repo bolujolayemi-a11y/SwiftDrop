@@ -19,16 +19,11 @@ export default function App() {
       try {
         const webApp = window.Telegram?.WebApp;
 
-        console.log('Telegram WebApp:', webApp);
-        console.log('initDataUnsafe:', webApp?.initDataUnsafe);
-
         const startParam =
           webApp?.initDataUnsafe?.start_param ||
           tg?.initDataUnsafe?.start_param;
 
         if (startParam) {
-          console.log('Telegram Deep Link:', startParam);
-
           setCurrentDropId(startParam);
 
           dropStore.incrementClickCount?.(startParam);
@@ -45,8 +40,6 @@ export default function App() {
           urlParams.get('dropId');
 
         if (webStartParam) {
-          console.log('Web Deep Link:', webStartParam);
-
           setCurrentDropId(webStartParam);
 
           dropStore.incrementClickCount?.(webStartParam);
@@ -64,7 +57,6 @@ export default function App() {
     };
 
     const timer = setTimeout(detectDeepLink, 300);
-
     return () => clearTimeout(timer);
   }, [tg]);
 
@@ -74,24 +66,14 @@ export default function App() {
 
     window.scrollTo({
       top: 0,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   };
 
-    if (!initialized) {
-      return null;
-    }
-    console.log('FULL WEBAPP', window.Telegram?.WebApp);
+  if (!initialized) {
+    return null;
+  }
 
-  console.log(
-    'FULL INIT DATA',
-    window.Telegram?.WebApp?.initDataUnsafe
-  );
-
-  console.log(
-    'START PARAM',
-    window.Telegram?.WebApp?.initDataUnsafe?.start_param
-  );
   return (
     <Providers>
       <PageWrapper>

@@ -20,27 +20,31 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
   const [claimState, setClaimState] = useState('idle');
   const [rollingAmount, setRollingAmount] = useState('0.00');
   const [revealedAmount, setRevealedAmount] = useState('');
-  const [redirectPayloadUrl, setRedirectPayloadUrl] = useState(''); 
+  const [redirectPayloadUrl, setRedirectPayloadUrl] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [statusText, setStatusText] = useState('');
 
-  // 🔄 Hydrate states automatically if a claim footprint exists for this user session
   useEffect(() => {
     if (!drop) return;
-    
+
     const userId = user?.id?.toString() || 'guest';
     const hasAlreadyClaimed = dropStore.hasUserClaimed(userId, drop.id);
-    
+
     if (hasAlreadyClaimed) {
       const pastClaimLog = drop.claimsList?.find(
         log => log.username === user?.username || log.userId === userId
       );
-      
+
       setRevealedAmount(pastClaimLog?.amount || drop.amount || '0.00');
       setClaimState('revealed');
     }
   }, [id, user, drop]);
+
+  const shortDescription =
+    drop?.description?.length > 140
+      ? drop.description.slice(0, 140) + '...'
+      : drop?.description;
 
   const triggerConfetti = () => {
     const duration = 1200;
@@ -59,10 +63,9 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
         }
       });
 
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
+      if (Date.now() < end) requestAnimationFrame(frame);
     };
+
     frame();
   };
 
@@ -137,7 +140,7 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
 
       setTimeout(() => {
         setRevealedAmount(result.amountClaimed);
-        setRedirectPayloadUrl(result.redirectUrl); 
+        setRedirectPayloadUrl(result.redirectUrl);
         setClaimState('revealed');
         setStatusText('');
         triggerHaptic('success');
@@ -157,14 +160,13 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
 
       setTimeout(() => {
         const cleanBotUrl = `https://t.me/SwiftyEx_bot`;
-        
+
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.openTelegramLink(cleanBotUrl);
         } else {
           window.open(cleanBotUrl, '_blank');
         }
-        
-        // 🔄 Delayed reset ensures standard route cleanup happens post-transition
+
         setTimeout(() => {
           setWithdrawSuccess(false);
           onNavigate('home');
@@ -208,7 +210,19 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
               ? 'Unlocking Live Distribution...'
               : drop.title}
           </h2>
-          {statusText && <p className="text-xs font-mono text-zinc-500 animate-pulse">{statusText}</p>}
+
+          {/* ✅ NEW: Description preview */}
+          {claimState === 'idle' && shortDescription && (
+            <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed mt-2">
+              {shortDescription}
+            </p>
+          )}
+
+          {statusText && (
+            <p className="text-xs font-mono text-zinc-500 animate-pulse">
+              {statusText}
+            </p>
+          )}
         </div>
       </div>
 
@@ -219,7 +233,9 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
             className="h-44 w-44 rounded-full flex flex-col items-center justify-center bg-zinc-900 border border-zinc-800 hover:border-brand-accent/40 active:scale-95 duration-200 transition-all cursor-pointer group shadow-xl"
           >
             <Gift className="h-10 w-10 text-brand-accent group-hover:animate-bounce" />
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pt-2">Tap to Claim</span>
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pt-2">
+              Tap to Claim
+            </span>
           </div>
         )}
 
@@ -269,12 +285,12 @@ export default function ClaimReward({ id, onNavigate, setDropId }) {
               Invite to Campaign
             </Button>
 
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => {
                 if (typeof setDropId === 'function') setDropId(drop.id);
                 onNavigate('leaderboard');
-              }} 
+              }}
               className="w-full py-3 text-xs font-semibold text-zinc-400"
             >
               <BarChart3 className="h-4 w-4" />
