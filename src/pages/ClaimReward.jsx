@@ -4,16 +4,22 @@ import { ledgerStore } from '@/features/ledger/ledgerStore';
 import { useTelegram } from '@/hooks/useTelegram';
 import Button from '@/components/ui/Button';
 import BackButton from '@/components/ui/BackButton';
-import { Gift, CheckCircle } from 'lucide-react';
+import {
+  Gift,
+  CheckCircle,
+  Users,
+  Share2,
+  Trophy
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
-  const { user, triggerHaptic } = useTelegram();
+  const { user, triggerHaptic, tg } = useTelegram();
 
   const drop = dropStore.getDropById(id);
   const userId = user?.id?.toString();
 
-  const [state, setState] = useState('idle'); // idle | rolling | revealed
+  const [state, setState] = useState('idle');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -27,7 +33,7 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // CHECK VERIFICATION
+  // VERIFICATION CHECK
   // -----------------------------
   const isVerified = (() => {
     try {
@@ -41,7 +47,6 @@ export default function ClaimReward({ id, onNavigate }) {
   useEffect(() => {
     if (!drop || !userId) return;
 
-    // 🚨 force verify step if required
     if (drop.trivia && !isVerified) {
       onNavigate('verify');
       return;
@@ -77,19 +82,13 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // CLAIM LOGIC
+  // CLAIM
   // -----------------------------
   const handleClaim = () => {
     if (state !== 'idle') return;
     if (!userId || !drop) return;
 
-    // 🔐 block if not verified
-    if (drop.trivia && !isVerified) {
-      onNavigate('verify');
-      return;
-    }
-
-    if (dropStore.hasUserClaimed(userId, drop.id)) return;
+    if (drop.trivia && !isVerified) return;
 
     triggerHaptic('impact');
     setState('rolling');
@@ -146,14 +145,12 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   // -----------------------------
-  // WITHDRAW LOGIC
+  // WITHDRAW
   // -----------------------------
   const handleWithdraw = () => {
     if (!amount || parseFloat(amount) <= 0) return;
 
-    const balance = wallet?.balance ?? 0;
-
-    if (parseFloat(amount) > balance) {
+    if ((wallet?.balance ?? 0) < parseFloat(amount)) {
       alert('Insufficient balance');
       return;
     }
@@ -176,23 +173,27 @@ export default function ClaimReward({ id, onNavigate }) {
 
       const botUrl = 'https://t.me/SwiftyEx_bot';
 
-      if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.openTelegramLink(botUrl);
-      } else {
-        window.open(botUrl, '_blank');
-      }
+      tg?.openLink ? tg.openLink(botUrl) : window.open(botUrl, '_blank');
 
-      sessionStorage.setItem(
-        'returnFromWithdraw',
-        JSON.stringify({
-          dropId: id,
-          page: 'claim'
-        })
-      );
-
-      setTimeout(() => onNavigate('home'), 200);
+      onNavigate('home');
     }, 1200);
   };
+
+  // -----------------------------
+  // INVITE FRIENDS
+  // -----------------------------
+  const handleInvite = () => {
+    const link = `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=I just claimed rewards on this drop 🚀`;
+    tg?.openLink ? tg.openLink(link) : window.open(link, '_blank');
+  };
+
+  // -----------------------------
+  // LEADERBOARD (LOCAL MOCK)
+  // -----------------------------
+  const leaderboard = ledgerStore
+    .getEvents()
+    .filter(e => e.type === 'claim')
+    .slice(0, 5);
 
   if (!drop) {
     return (
@@ -204,30 +205,50 @@ export default function ClaimReward({ id, onNavigate }) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
 
       <BackButton onBack={() => onNavigate('home')} />
 
-      {/* WALLET PREVIEW */}
+      {/* WALLET */}
       {state === 'revealed' && (
         <div className="text-xs p-3 bg-zinc-900 border rounded-xl">
           💰 Balance: {(wallet?.balance ?? 0).toFixed(2)} {token}
         </div>
       )}
 
-      <h2 className="text-xl font-bold text-center">
-        {state === 'revealed' ? 'Reward Unlocked' : drop.title}
-      </h2>
+      {/* TITLE + DESCRIPTION */}
+      <div className="text-center space-y-2">
+        <h2 className="text-xl font-bold">
+          {state === 'revealed' ? 'Reward Unlocked' : drop.title}
+        </h2>
 
-      {/* TRIVIA INFO */}
-      {drop.trivia && state === 'idle' && (
-        <div className="p-3 text-xs bg-zinc-900 border rounded-xl text-zinc-300">
-          🧠 {drop.trivia.question}
+        {drop.description && (
+          <p className="text-xs text-zinc-400">
+            {drop.description}
+          </p>
+        )}
+      </div>
+
+      {/* LEADERBOARD */}
+      <div className="p-3 bg-zinc-900 border rounded-xl space-y-2">
+        <div className="flex items-center gap-2 text-xs font-bold">
+          <Trophy className="h-4 w-4" /> Top Claimers
         </div>
-      )}
+
+        {leaderboard.length === 0 ? (
+          <p className="text-xs text-zinc-500">No claims yet</p>
+        ) : (
+          leaderboard.map((l, i) => (
+            <div key={i} className="text-xs flex justify-between text-zinc-400">
+              <span>{l.username}</span>
+              <span>+{l.amount} {l.token}</span>
+            </div>
+          ))
+        )}
+      </div>
 
       {/* CLAIM UI */}
-      <div className="flex justify-center my-8">
+      <div className="flex justify-center my-6">
         {state === 'idle' && (
           <div
             onClick={handleClaim}
@@ -257,13 +278,29 @@ export default function ClaimReward({ id, onNavigate }) {
 
       {/* ACTIONS */}
       {state === 'revealed' && (
-        <button
-          onClick={handleWithdraw}
-          disabled={isWithdrawing}
-          className="w-full py-3 bg-green-500 text-black font-bold rounded-xl"
-        >
-          {isWithdrawing ? 'Processing...' : 'Withdraw to SwiftyEx'}
-        </button>
+        <div className="space-y-2">
+
+          <Button onClick={handleWithdraw}>
+            Withdraw
+          </Button>
+
+          <Button onClick={handleInvite}>
+            <Share2 className="h-4 w-4" /> Invite Friends
+          </Button>
+
+          <Button onClick={() => onNavigate('wallet')}>
+            View Wallet
+          </Button>
+
+          <Button onClick={() => onNavigate('earnings')}>
+            Earnings History
+          </Button>
+
+          <Button onClick={() => onNavigate('leaderboard')}>
+            <Users className="h-4 w-4" /> Full Leaderboard
+          </Button>
+
+        </div>
       )}
     </div>
   );
