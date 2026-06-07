@@ -292,12 +292,8 @@ export default function ClaimReward({ id, onNavigate }) {
             View Wallet
           </Button>
 
-          <Button onClick={() => onNavigate('earnings')}>
-            Earnings History
-          </Button>
-
           <Button onClick={() => onNavigate('leaderboard')}>
-            <Users className="h-4 w-4" /> Full Leaderboard
+            <Users className="h-4 w-4" /> View Leaderboard
           </Button>
 
         </div>
