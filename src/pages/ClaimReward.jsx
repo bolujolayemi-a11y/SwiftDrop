@@ -2,42 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { dropStore } from '@/features/drops/dropStore';
 import { ledgerStore } from '@/features/ledger/ledgerStore';
 import { useTelegram } from '@/hooks/useTelegram';
-import Button from '@/components/ui/Button';
 import BackButton from '@/components/ui/BackButton';
-import {
-  Gift,
-  CheckCircle,
-  Users,
-  Share2,
-  Trophy
-} from 'lucide-react';
+import { Gift, CheckCircle, Share2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
   const { user, triggerHaptic, tg } = useTelegram();
-
   const drop = dropStore.getDropById(id);
   const userId = user?.id?.toString();
-
-  const [state, setState] = useState('idle');
-  const [amount, setAmount] = useState('');
+  const [state, setState] = useState('idle'); // idle | rolling | revealed
+  const [amount, setAmount] = useState('0.00');
   const [status, setStatus] = useState('');
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const token = drop?.token || 'USDT';
 
-  const wallet = ledgerStore.getWallet(userId) || {
-    balance: 0,
-    earnings: 0,
-    withdrawals: 0
-  };
-
-  // -----------------------------
-  // VERIFICATION CHECK
-  // -----------------------------
   const isVerified = (() => {
     try {
-      const data = sessionStorage.getItem(`swifty_verified_${id}`);
+      const data = sessionStorage.getItem(`swifty_verified_${id}`)
       return data ? JSON.parse(data).verified : false;
     } catch {
       return false;
@@ -46,27 +27,22 @@ export default function ClaimReward({ id, onNavigate }) {
 
   useEffect(() => {
     if (!drop || !userId) return;
-
     if (drop.trivia && !isVerified) {
       onNavigate('verify');
       return;
     }
-
     const hasClaimed = dropStore.hasUserClaimed(userId, drop.id);
 
     if (hasClaimed) {
       const past = drop.claimsList?.find(c => c.userId === userId);
-      setAmount(past?.amount || '0.00');
+      setAmount(String(past?.amount ?? '0.00'));
       setState('revealed');
     }
   }, [drop, userId]);
 
-  // -----------------------------
-  // CONFETTI
-  // -----------------------------
-  const fireConfetti = () => {
-    const end = Date.now() + 1000;
 
+  const fireConfetti = () => {
+    const end = Date.now() + 900;
     const frame = () => {
       confetti({
         particleCount: 5,
@@ -74,45 +50,42 @@ export default function ClaimReward({ id, onNavigate }) {
         gravity: 0.9,
         origin: { x: Math.random(), y: Math.random() * 0.4 }
       });
-
       if (Date.now() < end) requestAnimationFrame(frame);
-    };
 
+    };
     frame();
   };
 
-  // -----------------------------
-  // CLAIM
-  // -----------------------------
   const handleClaim = () => {
     if (state !== 'idle') return;
     if (!userId || !drop) return;
-
     if (drop.trivia && !isVerified) return;
 
     triggerHaptic('impact');
+
     setState('rolling');
 
     const fakeStatuses = [
-      'Connecting to reward pool...',
-      'Scanning slots...',
-      'Verifying eligibility...',
-      'Finalizing allocation...'
+      'Connecting...',
+      'Checking eligibility...',
+      'Allocating reward...',
+      'Finalizing...'
+
     ];
 
     let i = 0;
-    const statusInterval = setInterval(() => {
+    const interval = setInterval(() => {
       setStatus(fakeStatuses[i % fakeStatuses.length]);
       i++;
-    }, 500);
+    }, 450);
 
-    const rollInterval = setInterval(() => {
+    const roll = setInterval(() => {
       setAmount((Math.random() * 50 + 1).toFixed(2));
-    }, 80);
+    }, 70);
 
     setTimeout(() => {
-      clearInterval(statusInterval);
-      clearInterval(rollInterval);
+      clearInterval(interval);
+      clearInterval(roll);
 
       const result = dropStore.claimDrop(drop.id, {
         userId,
@@ -124,169 +97,125 @@ export default function ClaimReward({ id, onNavigate }) {
         return;
       }
 
-      const finalAmount = result.amountClaimed;
+      const finalAmount = String(result.amountClaimed ?? '0.00');
 
       setAmount(finalAmount);
 
       ledgerStore.addEvent({
+
         type: 'claim',
         userId,
         username: user?.username || 'user',
         dropId: drop.id,
         amount: finalAmount,
-        token,
-        timestamp: Date.now()
+        token: drop.token
+
       });
+
 
       setState('revealed');
       triggerHaptic('success');
       fireConfetti();
-    }, 2000);
+    }, 1800);
   };
 
-  // -----------------------------
-  // WITHDRAW
-  // -----------------------------
+
   const handleWithdraw = () => {
-    if (!amount || parseFloat(amount) <= 0) return;
+    const url = 'https://t.me/SwiftyEx_bot';
 
-    if ((wallet?.balance ?? 0) < parseFloat(amount)) {
-      alert('Insufficient balance');
-      return;
-    }
+    if (tg?.openLink) tg.openLink(url);
+    else window.open(url, '_blank');
 
-    setIsWithdrawing(true);
-
-    setTimeout(() => {
-      setIsWithdrawing(false);
-
-      ledgerStore.addEvent({
-        type: 'withdraw',
-        userId,
-        username: user?.username || 'user',
-        dropId: drop.id,
-        amount,
-        token,
-        status: 'initiated',
-        timestamp: Date.now()
-      });
-
-      const botUrl = 'https://t.me/SwiftyEx_bot';
-
-      tg?.openLink ? tg.openLink(botUrl) : window.open(botUrl, '_blank');
-
-      onNavigate('home');
-    }, 1200);
+    onNavigate('home');
   };
-
-  // -----------------------------
-  // INVITE FRIENDS
-  // -----------------------------
-  const handleInvite = () => {
-    const link = `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=I just claimed rewards on this drop 🚀`;
-    tg?.openLink ? tg.openLink(link) : window.open(link, '_blank');
-  };
-
-  // -----------------------------
-  // LEADERBOARD (LOCAL MOCK)
-  // -----------------------------
-  const leaderboard = ledgerStore
-    .getEvents()
-    .filter(e => e.type === 'claim')
-    .slice(0, 5);
 
   if (!drop) {
     return (
-      <div className="p-4 text-center">
-        <p>Drop not found</p>
-        <Button onClick={() => onNavigate('home')}>Back</Button>
+      <div className="text-center py-10 text-sm text-zinc-400">
+        Drop not found
       </div>
     );
+
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+    <div className="max-w-md mx-auto px-4 py-6 flex flex-col min-h-[80vh]">
 
       <BackButton onBack={() => onNavigate('home')} />
 
-      {/* WALLET */}
-      {state === 'revealed' && (
-        <div className="text-xs p-3 bg-zinc-900 border rounded-xl">
-          💰 Balance: {(wallet?.balance ?? 0).toFixed(2)} {token}
-        </div>
-      )}
-
-      {/* TITLE + DESCRIPTION */}
-      <div className="text-center space-y-2">
-        <h2 className="text-xl font-bold">
+      {/* TITLE */}
+      <div className="text-center mt-4 space-y-2">
+        <h2 className="text-xl font-bold text-white">
           {state === 'revealed' ? 'Reward Unlocked' : drop.title}
         </h2>
 
-        {drop.description && (
+        {drop.description && state === 'idle' && (
           <p className="text-xs text-zinc-400">
             {drop.description}
           </p>
         )}
-      </div>
 
-      {/* LEADERBOARD */}
-      <div className="p-3 bg-zinc-900 border rounded-xl space-y-2">
-        <div className="flex items-center gap-2 text-xs font-bold">
-          <Trophy className="h-4 w-4" /> Top Claimers
-        </div>
+        {status && (
 
-        {leaderboard.length === 0 ? (
-          <p className="text-xs text-zinc-500">No claims yet</p>
-        ) : (
-          leaderboard.map((l, i) => (
-            <div key={i} className="text-xs flex justify-between text-zinc-400">
-              <span>{l.username}</span>
-              <span>+{l.amount} {l.token}</span>
-            </div>
-          ))
+          <p className="text-xs text-zinc-500 animate-pulse">
+            {status}
+          </p>
+
         )}
       </div>
 
-      {/* CLAIM UI */}
-      <div className="flex justify-center my-6">
+      {/* CLAIM AREA */}
+      <div className="flex flex-1 items-center justify-center">
         {state === 'idle' && (
           <div
             onClick={handleClaim}
-            className="h-44 w-44 rounded-full flex flex-col items-center justify-center bg-zinc-900 border cursor-pointer"
+            className="h-40 w-40 rounded-full flex flex-col items-center justify-center bg-zinc-900 border cursor-pointer active:scale-95 transition"
           >
-            <Gift className="h-10 w-10" />
-            <p className="text-[10px] mt-2 text-zinc-500">Tap to Claim</p>
+            <Gift className="h-9 w-9 text-white" />
+            <p className="text-[10px] text-zinc-500 mt-2">Tap to Claim</p>
           </div>
         )}
 
         {state === 'revealed' && (
-          <div className="text-center space-y-2">
-            <CheckCircle className="mx-auto text-green-400" />
-            <h3 className="text-4xl font-black">
+          <div className="text-center space-y-3">
+            <CheckCircle className="mx-auto text-green-400 h-10 w-10" />
+            <h3 className="text-4xl font-black text-white">
               +{amount} {token}
             </h3>
+
+            <p className="text-xs text-zinc-500">
+              Reward successfully unlocked
+            </p>
           </div>
         )}
       </div>
 
-      {/* STATUS */}
-      {status && (
-        <p className="text-xs text-center text-zinc-500 animate-pulse">
-          {status}
-        </p>
-      )}
-
       {/* ACTIONS */}
       {state === 'revealed' && (
-        <div className="space-y-2">
+        <div className="space-y-2 mt-auto">
+          <button
+            onClick={handleWithdraw}
+            className="w-full py-3 rounded-xl bg-green-500 text-black font-bold text-sm"
+          >
+            Withdraw to SwiftyEx
+          </button>
 
-          <Button onClick={handleWithdraw}>
-            Withdraw
-          </Button>
+          <button
 
-          <Button onClick={handleInvite}>
-            <Share2 className="h-4 w-4" /> Invite Friends
-          </Button>
+            onClick={() => {
+
+              const link = `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=I just claimed ${amount} ${token}! 🚀`;
+
+              tg?.openLink ? tg.openLink(link) : window.open(link, '_blank');
+
+            }}
+
+            className="w-full py-3 rounded-xl border border-zinc-700 text-white text-sm"
+
+          >
+            <Share2 className="h-4 w-4 inline mr-2" />
+            Invite Friends
+          </button>
 
           <Button onClick={() => onNavigate('wallet')}>
             View Wallet
@@ -295,9 +224,9 @@ export default function ClaimReward({ id, onNavigate }) {
           <Button onClick={() => onNavigate('leaderboard')}>
             <Users className="h-4 w-4" /> View Leaderboard
           </Button>
-
         </div>
       )}
+
     </div>
   );
-}
+} 
