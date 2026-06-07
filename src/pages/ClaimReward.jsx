@@ -217,13 +217,13 @@ export default function ClaimReward({ id, onNavigate }) {
             Invite Friends
           </button>
 
-          <Button onClick={() => onNavigate('wallet')}>
+          <button onClick={() => onNavigate('wallet')}>
             View Wallet
-          </Button>
+          </button>
 
-          <Button onClick={() => onNavigate('leaderboard')}>
+          <button onClick={() => onNavigate('leaderboard')}>
             <Users className="h-4 w-4" /> View Leaderboard
-          </Button>
+          </button>
         </div>
       )}
 
