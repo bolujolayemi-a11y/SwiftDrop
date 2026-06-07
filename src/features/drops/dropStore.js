@@ -232,13 +232,15 @@ export const dropStore = {
     }
 
     const updatedHistory = [
-      {
-        username,
-        amount: finalAmount,
-        time: 'Just now'
-      },
-      ...(target.analytics?.history || [])
-    ];
+    {
+      userId,
+      username,
+      amount: finalAmount,
+      token: target.token,
+      time: Date.now()
+    },
+    ...(target.analytics?.history || [])
+  ];
 
     // 🔥 CRITICAL FIX: Synchronizes claims count incrementing cleanly alongside clicks data tracking arrays
     drops[targetIndex] = {

@@ -37,8 +37,11 @@ export default function ClaimReward({ id, onNavigate }) {
     const hasClaimed = dropStore.hasUserClaimed(userId, drop.id);
 
     if (hasClaimed) {
-      const past = drop.claimsList?.find(c => c.userId === userId);
-      setAmount(String(past?.amount ?? '0.00'));
+      const pastClaim = ledgerStore
+        .getUserEvents(userId)
+        .find(e => e.type === 'claim' && e.dropId === drop.id);
+
+      setAmount(pastClaim?.amount ?? '0.00');
       setState('revealed');
     }
   }, [drop, userId]);
@@ -106,7 +109,7 @@ export default function ClaimReward({ id, onNavigate }) {
         username: user?.username || 'user',
         dropId: drop.id,
         amount: finalAmount,
-        token: drop.token
+        token: drop.token || 'USDT'
       });
 
       setState('revealed');
