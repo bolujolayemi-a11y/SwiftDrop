@@ -260,7 +260,7 @@ export default function CreateDrop({ onNavigate }) {
           <Sparkles className="h-3.5 w-3.5" /> AI Campaign Prompt Copilot
         </div>
         <p className="text-xs text-zinc-400 leading-normal">
-          Type an active phrase (e.g. "reward users in usdc for answering a solana question") and let the LPU map the form state instantly.
+          Type an active phrase (e.g. "reward users in usdc for answering a solana question") and let the AI map the form state instantly.
         </p>
         <div className="flex gap-2">
           <input 
