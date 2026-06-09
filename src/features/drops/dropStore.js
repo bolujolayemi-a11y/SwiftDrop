@@ -12,7 +12,7 @@ function loadDrops() {
 }
 
 export const dropStore = {
-  drops: loadDrops(),
+  drops: [],
   demos: INTERACTIVE_DEMOS,
   listeners: [],
 
