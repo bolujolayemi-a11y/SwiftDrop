@@ -40,10 +40,11 @@ export default function App() {
 
           console.log('🎯 Deep link resolved to drop ID:', finalId);
 
-          setCurrentDropId(finalId);
-          setCurrentPage('claim'); // ✅ opens claim directly, not home
-          setInitialized(true);
-          return;
+          setTimeout(() => {
+            setCurrentDropId(finalId);
+            setRouteParams({ id: finalId });
+            setCurrentPage('claim');
+          }, 0);
         }
 
         setInitialized(true);
