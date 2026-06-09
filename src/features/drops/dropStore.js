@@ -1,8 +1,18 @@
 import { INTERACTIVE_DEMOS } from '@/data/mockDrops';
 import { dropApi } from '@/services/dropApi';
 
+const STORAGE_KEY = 'swifty_drops';
+
+function loadDrops() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
 export const dropStore = {
-  drops: [],
+  drops: loadDrops(),
   demos: INTERACTIVE_DEMOS,
   listeners: [],
 
