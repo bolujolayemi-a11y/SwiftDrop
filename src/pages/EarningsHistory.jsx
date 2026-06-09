@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import BackButton from '@/components/ui/BackButton';
 import GlassCard from '@/components/ui/GlassCard';
-import { getWallet } from '@/api/ledgerApi'; // ✅ use backend
+import { getWallet } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
+import { dropStore } from '@/features/drops/dropStore';
 
 export default function EarningsHistory({ onNavigate }) {
   const { user } = useTelegram();
@@ -31,20 +32,37 @@ export default function EarningsHistory({ onNavigate }) {
       {!claims.length ? (
         <p className="text-xs text-zinc-500">No earnings yet.</p>
       ) : (
-        claims.map(c => (
-          <GlassCard key={c.id} className="p-3 space-y-1">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-semibold">Reward Earned</p>
-                <p className="text-[10px] text-zinc-500">Drop: {c.dropId}</p>
-                <p className="text-[10px] text-zinc-600">
-                  {new Date(c.timestamp).toLocaleString()}
-                </p>
+        claims.map((c) => {
+          // ✅ Resolve drop title from store using dropId
+          const drop = dropStore.getDropById(c.dropId);
+          const dropTitle = drop?.title || c.dropId || 'Unknown Drop';
+
+          return (
+            <GlassCard key={c.id} className="p-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <div className="space-y-0.5">
+                  {/* Drop title */}
+                  <p className="text-sm font-bold text-white">{dropTitle}</p>
+                  {/* Drop ID in small mono */}
+                  <p className="text-[10px] font-mono text-zinc-500">ID: {c.dropId}</p>
+                  {/* Timestamp */}
+                  <p className="text-[10px] text-zinc-600">
+                    {new Date(c.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                {/* Amount + token */}
+                <div className="text-right">
+                  <p className="text-base font-black text-green-400">
+                    +{c.amount}
+                  </p>
+                  <p className="text-[10px] font-mono font-bold text-zinc-500 uppercase">
+                    {c.token || 'USDT'}
+                  </p>
+                </div>
               </div>
-              <p className="text-green-400 font-bold">+{c.amount} {c.token}</p>
-            </div>
-          </GlassCard>
-        ))
+            </GlassCard>
+          );
+        })
       )}
     </div>
   );

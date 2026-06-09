@@ -140,11 +140,11 @@ export default function WalletOverview({ onNavigate }) {
       </GlassCard>
 
       <Button onClick={() => setShowModal(true)} className="w-full font-black py-3.5 text-xs uppercase tracking-widest bg-emerald-500 text-black">
-        Withdraw to SwiftyEx Ledger
+        Withdraw to SwiftyEx_bot
       </Button>
 
       <div className="grid grid-cols-2 gap-2 pt-2">
-        <Button variant="secondary" onClick={() => onNavigate('earnings')} className="py-2.5 text-xs font-bold">History Feed</Button>
+        <Button variant="secondary" onClick={() => onNavigate('earnings')} className="py-2.5 text-xs font-bold">History</Button>
         <Button variant="secondary" onClick={() => onNavigate('withdrawals')} className="py-2.5 text-xs font-bold">Withdrawals</Button>
       </div>
 

@@ -104,13 +104,12 @@ export default function Router({
       return <Withdrawals {...commonProps} />;
 
     case 'leaderboard':
-      return (
-        <Leaderboard
-          onNavigate={onNavigate}
-          dropId={currentDropId}
-          params={params}
-        />
-      );
+  return (
+    <Leaderboard
+      onNavigate={onNavigate}
+      dropId={currentDropId}
+    />
+  );
 
     default:
       return <Home {...commonProps} />;
