@@ -5,7 +5,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import BackButton from '@/components/ui/BackButton';
 import Button from '@/components/ui/Button';
 import { Gift, CheckCircle, Share2, Users, AlertCircle, Sparkles } from 'lucide-react';
-import confetti from 'canvas-commetti';
+import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
   const { user, triggerHaptic, tg } = useTelegram();
