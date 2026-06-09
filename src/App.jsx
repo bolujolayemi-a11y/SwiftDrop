@@ -15,6 +15,7 @@ export default function App() {
   const [routeParams, setRouteParams] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
+    console.log(window.Telegram.WebApp.initData);
   useEffect(() => {
     const initApp = () => {
       try {
