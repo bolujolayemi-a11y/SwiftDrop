@@ -2,37 +2,33 @@ import express from "express";
 
 const router = express.Router();
 
-// 🚀 Dedicated data tables to simulate an active database instance
+/* =========================
+   IN-MEMORY DATABASE
+   ========================= */
 let events = [];
-let dynamicDrops = []; 
+let dynamicDrops = [];
 
-/*
- CREATE / SAVE NEW CAMPAIGN DROP
-*/
+/* =========================
+   CREATE DROP
+   ========================= */
 router.post("/create-drop", (req, res) => {
   const dropData = req.body;
 
   if (!dropData?.title || !dropData?.amount) {
     return res.status(400).json({
       success: false,
-      error: "Headline title and funding allocation capital size are required."
+      error: "title and amount required"
     });
   }
 
   const generatedDrop = {
     id: dropData.id || `drop-${Date.now()}`,
-    claimedCount: 0,
-    winnersCount: Number(dropData.winnersCount || 100),
-    isMystery: !!dropData.isMystery,
-    hasTrivia: !!dropData.trivia,
-    token: dropData.token || "USDT",
     title: dropData.title,
-    description: dropData.description || "",
-    communityUrl: dropData.communityUrl || "https://t.me/swift_dropbot",
-    creator: dropData.creator || "swift_merchant",
-    trivia: dropData.trivia || null,
+    amount: dropData.amount,
+    token: dropData.token || "USDT",
+    winnersCount: Number(dropData.winnersCount || 100),
+    claimedCount: 0,
     analytics: {
-      clicks: 1,
       history: []
     }
   };
@@ -45,40 +41,37 @@ router.post("/create-drop", (req, res) => {
   });
 });
 
-/*
- FETCH SINGLE DROP BY CLEAN PARAMETER ID
-*/
+/* =========================
+   GET DROP
+   ========================= */
 router.get("/drop/:id", (req, res) => {
-  const { id } = req.params;
-
-  // 🧠 Resilient normalization cleaning helper to strip shared text link prefixes
-  const cleanId = (input) => {
-    return String(input)
+  const clean = (id) =>
+    String(id)
       .replace(/^drop_/, "")
       .replace(/^claim_/, "")
       .replace(/^drop-/, "")
       .trim();
-  };
 
-  const targetId = cleanId(id);
-  const matchedDrop = dynamicDrops.find(d => cleanId(d.id) === targetId || String(d.id) === String(id));
+  const id = clean(req.params.id);
 
-  if (!matchedDrop) {
+  const drop = dynamicDrops.find(d => clean(d.id) === id);
+
+  if (!drop) {
     return res.status(404).json({
       success: false,
-      error: "Target promotion pool blueprint footprint not found."
+      error: "Drop not found"
     });
   }
 
   res.json({
     success: true,
-    drop: matchedDrop
+    drop
   });
 });
 
-/*
- ADD EVENT (LOG CLAIMS & WITHDRAWALS)
-*/
+/* =========================
+   ADD EVENT (CLAIM / WITHDRAW)
+   ========================= */
 router.post("/event", (req, res) => {
   const event = req.body;
 
@@ -92,33 +85,39 @@ router.post("/event", (req, res) => {
   const newEvent = {
     id: Date.now(),
     timestamp: Date.now(),
-    ...event
+    type: event.type, // claim | withdraw
+    userId: event.userId,
+    username: event.username || "user",
+    amount: Number(event.amount || 0),
+    token: event.token || "USDT",
+    dropId: event.dropId || null
   };
 
   events.unshift(newEvent);
 
-  // 📈 Dynamic state updater: If it's a claim, push it directly into the campaign drop's live feed history!
-  if (event.type === "claim" && event.dropId) {
-    const drop = dynamicDrops.find(d => String(d.id) === String(event.dropId));
+  /* update drop analytics if claim */
+  if (newEvent.type === "claim" && newEvent.dropId) {
+    const drop = dynamicDrops.find(d => String(d.id) === String(newEvent.dropId));
+
     if (drop) {
       drop.claimedCount += 1;
-      if (!drop.analytics.history) drop.analytics.history = [];
       drop.analytics.history.unshift({
-        username: event.username || "anonymous",
-        amount: event.amount || "0.00",
-        time: "Just now"
+        username: newEvent.username,
+        amount: newEvent.amount,
+        time: new Date().toISOString()
       });
     }
   }
 
   res.json({
-    success: true
+    success: true,
+    event: newEvent
   });
 });
 
-/*
- WALLET DATA CALCULATOR
-*/
+/* =========================
+   WALLET (MAIN SOURCE)
+   ========================= */
 router.post("/wallet", (req, res) => {
   const { userId } = req.body;
 
@@ -128,13 +127,14 @@ router.post("/wallet", (req, res) => {
 
   const earnings = userEvents
     .filter(e => e.type === "claim")
-    .reduce((a, b) => a + Number(b.amount || 0), 0);
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const withdrawals = userEvents
     .filter(e => e.type === "withdraw")
-    .reduce((a, b) => a + Number(b.amount || 0), 0);
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   res.json({
+    success: true,
     earnings,
     withdrawals,
     balance: earnings - withdrawals,
@@ -142,24 +142,27 @@ router.post("/wallet", (req, res) => {
   });
 });
 
-/*
- EARNINGS
-*/
+/* =========================
+   EARNINGS ONLY
+   ========================= */
 router.post("/earnings", (req, res) => {
   const { userId } = req.body;
 
   const total = events
-    .filter(
-      e => String(e.userId) === String(userId) && e.type === "claim"
+    .filter(e =>
+      String(e.userId) === String(userId) && e.type === "claim"
     )
-    .reduce((a, b) => a + Number(b.amount || 0), 0);
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
-  res.json({ total });
+  res.json({
+    success: true,
+    total
+  });
 });
 
-/*
- WITHDRAWALS
-*/
+/* =========================
+   WITHDRAWALS ONLY
+   ========================= */
 router.post("/withdrawals", (req, res) => {
   const { userId } = req.body;
 
@@ -167,7 +170,10 @@ router.post("/withdrawals", (req, res) => {
     e => String(e.userId) === String(userId) && e.type === "withdraw"
   );
 
-  res.json({ data });
+  res.json({
+    success: true,
+    data
+  });
 });
 
 export default router;

@@ -4,7 +4,7 @@ import { addEvent } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
 import BackButton from '@/components/ui/BackButton';
 import Button from '@/components/ui/Button';
-import { Gift, CheckCircle, Share2, Users } from 'lucide-react';
+import { Gift, CheckCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
@@ -58,7 +58,7 @@ export default function ClaimReward({ id, onNavigate }) {
       if (i >= steps.length) clearInterval(interval);
     }, 700);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const result = dropStore.claimDrop(drop.id, {
         userId,
         username: user?.username || 'user'
@@ -71,7 +71,8 @@ export default function ClaimReward({ id, onNavigate }) {
 
       setAmount(result.amountClaimed);
 
-      addEvent({
+      // ✅ FIXED: proper async call
+      await addEvent({
         type: 'claim',
         userId,
         username: user?.username || 'user',
@@ -100,7 +101,7 @@ export default function ClaimReward({ id, onNavigate }) {
 
   const handleBack = () => {
     if (state === 'revealed') {
-      onNavigate('wallet'); // post-claim hub
+      onNavigate('wallet');
     } else {
       onNavigate('home');
     }
@@ -157,11 +158,13 @@ export default function ClaimReward({ id, onNavigate }) {
         <div className="mt-10 space-y-2">
           <Button onClick={() => onNavigate('wallet')}>Wallet</Button>
 
-          <Button onClick={() =>
-            tg?.openLink?.(
-              `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=I just claimed ${amount} ${token}`
-            )
-          }>
+          <Button
+            onClick={() =>
+              tg?.openLink?.(
+                `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=I just claimed ${amount} ${token}`
+              )
+            }
+          >
             Invite Friends
           </Button>
 

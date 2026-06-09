@@ -8,6 +8,7 @@ import { dropStore } from '@/features/drops/dropStore';
 
 export default function App() {
   const { tg } = useTelegram();
+
   const [currentPage, setCurrentPage] = useState('home');
   const [currentDropId, setCurrentDropId] = useState(null);
   const [routeParams, setRouteParams] = useState(null);
@@ -32,19 +33,21 @@ export default function App() {
             .trim();
 
           const drops = dropStore.getDrops();
+          const demos = dropStore.getDemos();
+
           const targetDrop =
-            drops.find(d => d.id.includes(cleanDropId) || cleanDropId.includes(d.id)) ||
-            dropStore.getDemos?.()?.find(d => d.id.includes(cleanDropId) || cleanDropId.includes(d.id));
+            drops.find(d => String(d.id) === cleanDropId) ||
+            demos.find(d => String(d.id) === cleanDropId);
 
           const finalId = targetDrop ? targetDrop.id : cleanDropId;
 
-          console.log('🎯 Deep link resolved to drop ID:', finalId);
+          setCurrentDropId(finalId);
 
-          setTimeout(() => {
-            setCurrentDropId(finalId);
-            setRouteParams({ id: finalId });
-            setCurrentPage('claim');
-          }, 0);
+          // 🔥 IMPORTANT: force claim page
+          setCurrentPage('claim');
+
+          setInitialized(true);
+          return;
         }
 
         setInitialized(true);
@@ -72,6 +75,7 @@ export default function App() {
         {currentPage !== 'deeplink' && (
           <Navbar onNavigate={handleNavigation} currentPage={currentPage} />
         )}
+
         <Router
           currentPage={currentPage}
           onNavigate={handleNavigation}

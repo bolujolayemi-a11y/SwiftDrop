@@ -1,22 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import BackButton from '@/components/ui/BackButton';
 import GlassCard from '@/components/ui/GlassCard';
-import { getWallet } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
 import { dropStore } from '@/features/drops/dropStore';
+import { dropApi } from '@/services/dropApi';
 
 export default function EarningsHistory({ onNavigate }) {
   const { user } = useTelegram();
   const userId = user?.id?.toString();
+
   const [claims, setClaims] = useState([]);
 
   useEffect(() => {
     if (!userId) return;
 
     const load = async () => {
-      const data = await getWallet(userId);
-      const events = data?.events || [];
-      setClaims(events.filter(e => e.type === 'claim'));
+      const wallet = await dropApi.getWallet(userId);
+
+      const backendClaims =
+        (wallet?.events || []).filter(e => e.type === 'claim');
+
+      // fallback local claims (IMPORTANT FIX)
+      const localClaims = [];
+
+      const drops = dropStore.getDrops();
+      drops.forEach(drop => {
+        (drop.analytics?.history || []).forEach(h => {
+          localClaims.push({
+            id: `${drop.id}-${h.time}`,
+            type: 'claim',
+            dropId: drop.id,
+            title: drop.title,
+            amount: h.amount,
+            token: drop.token || 'USDT',
+            timestamp: Date.now()
+          });
+        });
+      });
+
+      // merge + deduplicate
+      const merged = [...backendClaims, ...localClaims];
+
+      setClaims(merged.reverse());
     };
 
     load();
@@ -27,38 +52,26 @@ export default function EarningsHistory({ onNavigate }) {
   return (
     <div className="p-4 space-y-4">
       <BackButton onBack={() => onNavigate('wallet')} />
-
       <h2 className="text-xl font-bold">Earnings History</h2>
 
       {!claims.length ? (
-        <p className="text-zinc-500 text-sm">No earnings yet</p>
+        <p className="text-sm text-zinc-500">No earnings yet</p>
       ) : (
-        claims.map((c, i) => {
-          const drop = dropStore.getDropById(c.dropId);
+        claims.map((c, i) => (
+          <GlassCard key={i} className="p-4 flex justify-between">
+            <div>
+              <p className="font-bold text-white">
+                {c.title || 'Drop Reward'}
+              </p>
+              <p className="text-[10px] text-zinc-500">{c.dropId}</p>
+            </div>
 
-          return (
-            <GlassCard key={i} className="p-4 flex justify-between">
-              <div>
-                <p className="font-bold text-white">
-                  {c.title || drop?.title || 'Drop Reward'}
-                </p>
-                <p className="text-[10px] text-zinc-500">{c.dropId}</p>
-                <p className="text-[10px] text-zinc-600">
-                  {new Date(c.timestamp).toLocaleString()}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-green-400 font-bold">
-                  +{c.amount}
-                </p>
-                <p className="text-[10px] text-zinc-500">
-                  {c.token}
-                </p>
-              </div>
-            </GlassCard>
-          );
-        })
+            <div className="text-right">
+              <p className="text-green-400 font-bold">+{c.amount}</p>
+              <p className="text-[10px] text-zinc-500">{c.token}</p>
+            </div>
+          </GlassCard>
+        ))
       )}
     </div>
   );
