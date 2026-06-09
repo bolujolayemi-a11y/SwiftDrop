@@ -8,10 +8,8 @@ export default function Withdrawals({ onNavigate }) {
   const { user } = useTelegram();
   const userId = user?.id?.toString();
 
-  const wallet = await dropApi.getWallet(userId);
-
-  const withdrawals = (wallet?.events || []).filter(e => e.type === 'withdraw');  
   const [withdrawals, setWithdrawals] = useState([]);
+
   useEffect(() => {
     if (!userId) return;
 
