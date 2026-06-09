@@ -27,12 +27,23 @@ export default function App() {
           new URLSearchParams(window.location.search).get('tgWebAppStartParam');
 
         if (rawStartParam) {
-          // 🛡️ KEEP THE RAW ID PURE. Do not strip or alter string characters!
-          const cleanDropId = String(rawStartParam).trim();
+          // 🧠 BULLETPROOF STRIPPING: Get rid of shared text prefixes instantly on boot!
+          let cleanDropId = String(rawStartParam)
+            .replace(/^drop_/, '')
+            .replace(/^claim_/, '')
+            .replace(/^drop-/, '')
+            .trim();
 
-          console.log("🎯 Resolved Live App Deep-Link Reference ID:", cleanDropId);
+          // Re-attach standard storage identifier format to search local database files accurately
+          const drops = dropStore.getDrops();
+          const targetDrop = drops.find(d => d.id.includes(cleanDropId) || cleanDropId.includes(d.id)) 
+            || dropStore.getDemos().find(d => d.id.includes(cleanDropId) || cleanDropId.includes(d.id));
 
-          setCurrentDropId(cleanDropId);
+          const finalId = targetDrop ? targetDrop.id : cleanDropId;
+
+          console.log("🎯 Pure Extracted Campaign Reference Key ID:", finalId);
+
+          setCurrentDropId(finalId);
           
           // 🚀 Route directly into the claim viewport stage layout
           setCurrentPage('claim'); 
@@ -48,7 +59,6 @@ export default function App() {
       }
     };
 
-    // Minor execution buffer delay to ensure webview container bindings are ready
     const timer = setTimeout(initApp, 150);
     return () => clearTimeout(timer);
   }, [tg]);
