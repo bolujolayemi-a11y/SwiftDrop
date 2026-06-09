@@ -1,3 +1,21 @@
+import React from 'react';
+
+import Home from '@/pages/Home';
+import CreateDrop from '@/pages/CreateDrop';
+import Dashboard from '@/pages/Dashboard';
+import DropDetails from '@/pages/DropDetails';
+import ClaimReward from '@/pages/ClaimReward';
+import VerifyAction from '@/pages/VerifyAction';
+import CampaignAnalytics from '@/pages/CampaignAnalytics';
+import Gatekeeper from '@/pages/Gatekeeper';
+import Leaderboard from '@/pages/Leaderboard';
+import UserGuide from '@/pages/UserGuide';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import DeepLink from '@/pages/DeepLink';
+import WalletOverview from '@/pages/WalletOverview';
+import EarningsHistory from '@/pages/EarningsHistory';
+import Withdrawals from '@/pages/Withdrawals';
+
 export default function Router({
   currentPage,
   onNavigate,
