@@ -27,17 +27,17 @@ export default function App() {
 
         if (rawStartParam) {
           let cleanDropId = String(rawStartParam)
-            .replace(/^drop_/, '')
-            .replace(/^claim_/, '')
-            .replace(/^drop-/, '')
-            .trim();
+          .replace(/^(drop_|claim_|drop-)/, '')
+          .split('_')[0]
+          .trim();
 
           const drops = dropStore.getDrops();
           const demos = dropStore.getDemos();
 
           const targetDrop =
             drops.find(d => String(d.id) === cleanDropId) ||
-            demos.find(d => String(d.id) === cleanDropId);
+            drops.find(d => String(d.id).includes(cleanDropId)) ||
+            dropStore.getDemos?.()?.find(d => String(d.id) === cleanDropId);
 
           const finalId = targetDrop ? targetDrop.id : cleanDropId;
 

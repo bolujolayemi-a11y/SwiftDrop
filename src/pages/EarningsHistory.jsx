@@ -9,8 +9,9 @@ export default function EarningsHistory({ onNavigate }) {
   const { user } = useTelegram();
   const userId = user?.id?.toString();
 
-  const [claims, setClaims] = useState([]);
+  const wallet = await dropApi.getWallet(userId);
 
+  const claims = (wallet?.events || []).filter(e => e.type === 'claim');
   useEffect(() => {
     if (!userId) return;
 

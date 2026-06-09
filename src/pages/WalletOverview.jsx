@@ -92,7 +92,14 @@ export default function WalletOverview({ onNavigate }) {
         status: 'initiated',
         timestamp: Date.now()
       };
-      localStorage.setItem(`swifty_withdrawals_${userId}`, JSON.stringify([newWithdrawal, ...currentWithdrawals]));
+      await dropApi.addEvent({
+      type: 'withdraw',
+      userId,
+      username: user?.username || 'user',
+      amount,
+      token: selectedToken,
+      timestamp: Date.now()
+    });
     } catch (err) {
       console.error(err);
     }
