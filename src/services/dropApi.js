@@ -1,15 +1,29 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export const dropApi = {
-  // Fetch campaigns from the network ledger
-  async fetchAllDrops() {
+  // Push a newly compiled AI campaign block directly onto your running server node
+  async saveNewDrop(dropPayload) {
     try {
-      const res = await fetch(`${BASE_URL}/ledger/wallet`); // Or your custom get campaigns route
-      if (!res.ok) return [];
+      const res = await fetch(`${BASE_URL}/ledger/create-drop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dropPayload)
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  // Fetch a specific campaign dynamically from Port 8000
+  async fetchDropById(id) {
+    try {
+      const res = await fetch(`${BASE_URL}/ledger/drop/${id}`);
+      if (!res.ok) return null;
       const data = await res.json();
-      return data.events || [];
+      return data.success ? data.drop : null;
     } catch {
-      return [];
+      return null;
     }
   },
 
