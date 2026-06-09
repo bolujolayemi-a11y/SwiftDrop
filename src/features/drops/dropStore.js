@@ -29,7 +29,7 @@ let userClaimsRegistry = (() => {
 })();
 
 export const dropStore = {
-  drops: loadDrops(), // ✅ Always hydrate initial memory from disk storage on launch
+  drops: loadDrops(), 
   demos: INTERACTIVE_DEMOS,
   listeners: [],
 
@@ -42,8 +42,9 @@ export const dropStore = {
   },
 
   getDrops() {
-    this.drops = loadDrops(); // Always stay fresh
-    return this.drops;
+    this.drops = loadDrops(); 
+    // 🧠 FIX: Hide any cloned interactive demos from showing up on the Merchant Dashboard
+    return this.drops.filter(d => d.isDemo !== true);
   },
 
   getDemos() {
@@ -58,6 +59,7 @@ export const dropStore = {
       isMystery: !!drop.isMystery,
       hasTrivia: !!drop.trivia,
       token: drop.token || 'USDT',
+      isDemo: false, // Core merchant campaign flag
       analytics: {
         clicks: 1,
         history: []
@@ -66,7 +68,7 @@ export const dropStore = {
     };
 
     this.drops = [newDrop, ...loadDrops()];
-    saveDrops(this.drops); // ✅ RESTORED DISK PERSISTENCE
+    saveDrops(this.drops); 
     this.notify();
     return newDrop;
   },
@@ -78,7 +80,6 @@ export const dropStore = {
     const activeDrops = loadDrops(); 
     const demos = this.demos;
 
-    // Helper to strip any shared URL string text prefix mutations
     const cleanId = (input) => {
       return String(input)
         .replace(/^drop_/, '')
@@ -111,7 +112,45 @@ export const dropStore = {
     }
 
     const targetIndex = this.drops.findIndex(d => String(d.id) === String(drop.id));
-    const amountClaimed = (Math.random() * 50 + 1).toFixed(2);
+    
+    // 💵 FIX: Dynamic Math Allocation Engine
+    // 💵 TRUE RANDOMIZED DYNAMIC POOL MATH ENGINE
+    const totalPoolSize = parseFloat(drop.amount) || 0;
+    const maxWinners = parseInt(drop.winnersCount, 10) || 1;
+    
+    // 1. Calculate how much capital has already been claimed out of this pool
+    const claimedVolume = (drop.analytics?.history || []).reduce(
+      (sum, record) => sum + parseFloat(record.amount || 0), 
+      0
+    );
+    
+    const remainingPool = Math.max(0, totalPoolSize - claimedVolume);
+    const remainingSlots = Math.max(1, maxWinners - drop.claimedCount);
+    
+    let amountClaimed = '0.00';
+
+    if (remainingSlots <= 1) {
+      // 🎯 Last person standing takes the absolute remainder of the capital to empty the pool perfectly
+      amountClaimed = remainingPool.toFixed(2);
+    } else if (remainingPool <= 0) {
+      amountClaimed = '0.00';
+    } else {
+      // 🎰 Dynamic Boundary Formula: Compute weighted random allocation caps
+      const averageRemainingAllocation = remainingPool / remainingSlots;
+      
+      // Keep a tiny reserve so future users are guaranteed to get at least $0.01
+      const safetyReserve = (remainingSlots - 1) * 0.01;
+      
+      const minPayout = 0.01;
+      const maxPayout = Math.max(
+        minPayout, 
+        Math.min(remainingPool - safetyReserve, averageRemainingAllocation * 2)
+      );
+
+      // Roll the dice between the minimum penny and our mathematical ceiling
+      const randomRoll = Math.random() * (maxPayout - minPayout) + minPayout;
+      amountClaimed = randomRoll.toFixed(2);
+    }
     
     drop.claimedCount = (drop.claimedCount || 0) + 1;
     if (!drop.analytics) drop.analytics = { clicks: 1, history: [] };
@@ -126,7 +165,7 @@ export const dropStore = {
     if (targetIndex !== -1) {
       this.drops[targetIndex] = drop;
     } else {
-      this.drops.push(drop); // Clone demo drops into live tracks if claimed
+      this.drops.push(drop); // Clone demo drops into live tracking local storage safely
     }
 
     // Persist modifications to disk storage fields
@@ -150,6 +189,12 @@ export const dropStore = {
       success: true,
       amountClaimed
     };
+  },
+
+  deleteDrop(id) {
+    this.drops = loadDrops().filter(d => String(d.id) !== String(id));
+    saveDrops(this.drops);
+    this.notify();
   },
 
   subscribe(fn) {

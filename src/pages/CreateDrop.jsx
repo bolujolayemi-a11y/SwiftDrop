@@ -156,7 +156,7 @@ export default function CreateDrop({ onNavigate }) {
           </div>
           <div>
             <h2 className="text-base font-black tracking-tight text-white">Campaign Active</h2>
-            <p className="text-[11px] text-zinc-500 font-medium">Fund via SwiftyEx to activate dynamic distribution links.</p>
+            <p className="text-[11px] text-zinc-500 font-medium">Fund via SwiftyEx_bot.</p>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export default function CreateDrop({ onNavigate }) {
           >
             <div className="absolute inset-0 bg-linear-to-r from-brand-accent to-blue-600 transition-all group-hover:opacity-90" />
             <span className="relative z-10 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider">
-              ⚡ Open SwiftyEx_bot <ExternalLink className="h-3.5 w-3.5" />
+              ⚡ Fund with SwiftyEx_bot <ExternalLink className="h-3.5 w-3.5" />
             </span>
           </Button>
           <Button variant="secondary" onClick={() => onNavigate('dashboard')} className="w-full py-3 text-xs font-bold">
@@ -207,7 +207,7 @@ export default function CreateDrop({ onNavigate }) {
       
       <div className="space-y-0.5">
         <h2 className="text-xl font-black tracking-tight text-white">Create Reward Drop</h2>
-        <p className="text-xs text-zinc-500">Deploy high-engagement promotional allocations natively.</p>
+        <p className="text-xs text-zinc-500">Send instant rewards. Grow your community.</p>
       </div>
 
       <GlassCard className="border-brand-accent/20 bg-zinc-950/10 space-y-2.5 p-4 rounded-xl">
@@ -228,7 +228,7 @@ export default function CreateDrop({ onNavigate }) {
             disabled={isAiGenerating}
             className="bg-brand-accent text-white rounded-xl px-4 text-xs font-bold hover:bg-blue-600 disabled:opacity-50 min-w-18.75 cursor-pointer"
           >
-            {isAiGenerating ? "Mapping..." : "Enter"}
+            {isAiGenerating ? "Processing..." : "Enter"}
           </button>
         </div>
       </GlassCard>
@@ -243,7 +243,7 @@ export default function CreateDrop({ onNavigate }) {
         />
         
         <div className="space-y-1.5">
-          <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Campaign Context Description</label>
+          <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Campaign Description</label>
           <textarea 
             rows={3}
             placeholder="Describe action qualification benchmarks explicitly..."
@@ -305,7 +305,7 @@ export default function CreateDrop({ onNavigate }) {
           <div onClick={() => { setIsMystery(!isMystery); triggerHaptic('impact'); }} className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${isMystery ? 'bg-amber-500/5 border-amber-500/20 text-white' : 'bg-zinc-900/10 border-zinc-800/60 text-zinc-500'}`}>
             <div className="space-y-0.5 text-left max-w-[85%]">
               <div className="text-xs font-bold text-amber-400">🎰 Mystery Mechanism</div>
-              <p className="text-[10px] text-zinc-500 leading-normal">Distribute completely randomized payout sizes within pool limits.</p>
+              <p className="text-[10px] text-zinc-500 leading-normal">Gamified rewards. Random payouts from a single pool.</p>
             </div>
             <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center ${isMystery ? 'bg-amber-500 border-transparent text-black' : 'border-zinc-700'}`}>{isMystery && <Check className="h-3 w-3 stroke-3" />}</div>
           </div>
@@ -313,7 +313,7 @@ export default function CreateDrop({ onNavigate }) {
           <div onClick={() => { setHasTrivia(!hasTrivia); triggerHaptic('impact'); }} className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${hasTrivia ? 'bg-brand-accent/5 border-brand-accent/20 text-white' : 'bg-zinc-900/10 border-zinc-800/60 text-zinc-500'}`}>
             <div className="space-y-0.5 text-left max-w-[85%]">
               <div className="text-xs font-bold text-brand-accent">🧠 Trivia Verification Gate</div>
-              <p className="text-[10px] text-zinc-500 leading-normal">Filter industrial anti-bot farmers via contextual quiz gates.</p>
+              <p className="text-[10px] text-zinc-500 leading-normal">Keep rewards for real humans with trivia verification.</p>
             </div>
             <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center ${hasTrivia ? 'bg-brand-accent border-transparent text-white' : 'border-zinc-700'}`}>{hasTrivia && <Check className="h-3 w-3 stroke-3" />}</div>
           </div>
