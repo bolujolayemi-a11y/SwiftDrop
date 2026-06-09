@@ -11,7 +11,7 @@ export default function DropDetails({ id, onNavigate, setDropId }) {
   if (!drop) {
     return (
       <div className="space-y-4 text-center pt-10">
-        <p className="text-zinc-400 text-sm">Target reference footprint not resolved inside volatile memory arrays.</p>
+        <p className="text-zinc-400 text-sm">Drop Not Found</p>
         <Button onClick={() => onNavigate('home')}>Return Home</Button>
       </div>
     );
