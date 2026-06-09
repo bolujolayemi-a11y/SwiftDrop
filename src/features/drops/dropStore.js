@@ -1,26 +1,22 @@
 import { INTERACTIVE_DEMOS } from '@/data/mockDrops';
-
-const STORAGE_KEY = 'swifty_drops';
-
-function loadDrops() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function saveDrops(drops) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(drops));
-}
+import { dropApi } from '@/services/dropApi';
 
 export const dropStore = {
-  drops: loadDrops(),
+  drops: [],
   demos: INTERACTIVE_DEMOS,
   listeners: [],
 
+  
+  async syncWithBackend() {
+    try {
+      
+      return this.drops;
+    } catch {
+      return this.drops;
+    }
+  },
+
   getDrops() {
-    this.drops = loadDrops(); // always sync
     return this.drops;
   },
 
@@ -30,7 +26,7 @@ export const dropStore = {
 
   addDrop(drop) {
     const newDrop = {
-      id: Date.now().toString(),
+      id: `drop-${Date.now()}`, 
       claimedCount: 0,
       winnersCount: 100,
       isMystery: false,
@@ -39,39 +35,47 @@ export const dropStore = {
     };
 
     this.drops.unshift(newDrop);
-    saveDrops(this.drops);     // ✅ SAVE
     this.notify();
-
     return newDrop;
   },
 
+
   getDropById(id) {
-    const drops = loadDrops();  // ✅ ALWAYS FRESH
+    if (!id) return null;
+    
+    const drops = loadDrops(); 
     const demos = this.demos;
 
+    
     return (
-      drops.find(d => d.id === id) ||
-      demos.find(d => d.id === id) ||
+      drops.find(d => String(d.id) === String(id)) ||
+      demos.find(d => String(d.id) === String(id)) ||
       null
     );
   },
 
   hasUserClaimed(userId, dropId) {
+    
     return false;
   },
 
   claimDrop(id, { userId, username }) {
-    const drops = loadDrops();
-    const drop = drops.find(d => d.id === id);
-
+    const drop = this.getDropById(id);
     if (!drop) return { success: false };
 
     const amountClaimed = (Math.random() * 50 + 1).toFixed(2);
-
     drop.claimedCount = (drop.claimedCount || 0) + 1;
 
-    saveDrops(drops);   // ✅ SAVE UPDATE
-    this.drops = drops;
+    
+    dropApi.addEvent({
+      type: 'claim',
+      userId,
+      username,
+      dropId: id,
+      amount: amountClaimed,
+      token: drop.token || 'USDT'
+    });
+
     this.notify();
 
     return {

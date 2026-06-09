@@ -58,16 +58,14 @@ export default function VerifyAction({ id, onNavigate }) {
     triggerHaptic('impact');
 
     const shareUrl = `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=Claim your share of the ${encodeURIComponent(drop.title)} pool instantly on SwiftDrop! 🚀`;
-    
+
     if (tg?.openLink) {
       tg.openLink(shareUrl);
     } else {
       window.open(shareUrl, '_blank');
     }
 
-    tg.openLink(shareUrl);
-
-      setHasShared(true);
+    setHasShared(true);
   };
 
     const handleVerifySubmission = () => {

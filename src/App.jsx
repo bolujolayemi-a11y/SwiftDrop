@@ -4,7 +4,6 @@ import Navbar from '@/components/layout/Navbar';
 import PageWrapper from '@/components/layout/PageWrapper';
 import Router from '@/app/router';
 import { useTelegram } from '@/hooks/useTelegram';
-import { dropApi } from '@/services/dropApi';
 import { dropStore } from '@/features/drops/dropStore';
 
 export default function App() {
@@ -20,20 +19,23 @@ export default function App() {
       try {
         const webApp = window.Telegram?.WebApp;
 
+        // 🤖 Unified deep-link extraction hook tracking
         const rawStartParam =
           webApp?.initDataUnsafe?.start_param ||
           tg?.initDataUnsafe?.start_param ||
-          new URLSearchParams(window.location.search).get('startapp');
+          new URLSearchParams(window.location.search).get('startapp') ||
+          new URLSearchParams(window.location.search).get('tgWebAppStartParam');
 
         if (rawStartParam) {
-          let dropId = rawStartParam;
+          // 🛡️ KEEP THE RAW ID PURE. Do not strip or alter string characters!
+          const cleanDropId = String(rawStartParam).trim();
 
-          // normalize formats
-          if (dropId.startsWith('drop_')) dropId = dropId.replace('drop_', '');
-          if (dropId.startsWith('claim_')) dropId = dropId.replace('claim_', '');
+          console.log("🎯 Resolved Live App Deep-Link Reference ID:", cleanDropId);
 
-          setCurrentDropId(dropId);
-          setCurrentPage('claim'); // IMPORTANT
+          setCurrentDropId(cleanDropId);
+          
+          // 🚀 Route directly into the claim viewport stage layout
+          setCurrentPage('claim'); 
 
           setInitialized(true);
           return;
@@ -41,12 +43,13 @@ export default function App() {
 
         setInitialized(true);
       } catch (err) {
-        console.error('App init error:', err);
+        console.error('App runtime initialisation error:', err);
         setInitialized(true);
       }
     };
 
-    const timer = setTimeout(initApp, 300);
+    // Minor execution buffer delay to ensure webview container bindings are ready
+    const timer = setTimeout(initApp, 150);
     return () => clearTimeout(timer);
   }, [tg]);
 

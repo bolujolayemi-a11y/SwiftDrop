@@ -1,48 +1,38 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-const request = async (url, options = {}) => {
-  const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json"
-    },
-    ...options
-  });
-  return res.json();
-};
-
 export const dropApi = {
-  getMe: () =>
-    request(`${BASE_URL}/miniapp/me`, {
-      method: "POST",
-      body: JSON.stringify({
-        initData: window.Telegram?.WebApp?.initData || ""
-      })
-    }),
-  getTransactions: (page = 1) =>
-    request(`${BASE_URL}/miniapp/transactions`, {
-      method: "POST",
-      body: JSON.stringify({ page })
-    }),
-  getRates: () =>
-    request(`${BASE_URL}/miniapp/rates`),
-  addEvent: (event) =>
-    request(`${BASE_URL}/ledger/event`, {
-      method: "POST",
-      body: JSON.stringify(event)
-    }),
-  getWallet: (userId) =>
-    request(`${BASE_URL}/ledger/wallet`, {
-      method: "POST",
-      body: JSON.stringify({ userId })
-    }),
-  getEarnings: (userId) =>
-    request(`${BASE_URL}/ledger/earnings`, {
-      method: "POST",
-      body: JSON.stringify({ userId })
-    }),
-  getWithdrawals: (userId) =>
-    request(`${BASE_URL}/ledger/withdrawals`, {
-      method: "POST",
-      body: JSON.stringify({ userId })
-    })
+  // Fetch campaigns from the network ledger
+  async fetchAllDrops() {
+    try {
+      const res = await fetch(`${BASE_URL}/ledger/wallet`); // Or your custom get campaigns route
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.events || [];
+    } catch {
+      return [];
+    }
+  },
+
+  // Save an event log downstream to your Express routes
+  async addEvent(eventData) {
+    try {
+      const res = await fetch(`${BASE_URL}/ledger/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData),
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  async getWallet(userId) {
+    const res = await fetch(`${BASE_URL}/ledger/wallet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    return res.json();
+  }
 };

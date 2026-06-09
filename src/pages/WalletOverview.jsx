@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import BackButton from '@/components/ui/BackButton';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
-import { getWallet } from '@/api/ledgerApi';
+import { getWallet, addEvent } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
 
 export default function WalletOverview({ onNavigate }) {
@@ -13,7 +13,7 @@ export default function WalletOverview({ onNavigate }) {
   const [showModal, setShowModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('USDT');
-  
+
   useEffect(() => {
     if (!userId) return;
 
@@ -23,35 +23,22 @@ export default function WalletOverview({ onNavigate }) {
     };
 
     load();
-
     const interval = setInterval(load, 3000);
-
     return () => clearInterval(interval);
   }, [userId]);
 
-  // 🧠 GROUP BALANCES BY TOKEN
   const balances = events.reduce((acc, e) => {
-    if (e.type === 'claim') {
-      const token = e.token || 'USDT';
-      acc[token] = (acc[token] || 0) + parseFloat(e.amount || 0);
-    }
-
-    if (e.type === 'withdraw') {
-      const token = e.token || 'USDT';
-      acc[token] = (acc[token] || 0) - parseFloat(e.amount || 0);
-    }
-
+    const token = e.token || 'USDT';
+    if (e.type === 'claim') acc[token] = (acc[token] || 0) + parseFloat(e.amount || 0);
+    if (e.type === 'withdraw') acc[token] = (acc[token] || 0) - parseFloat(e.amount || 0);
     return acc;
   }, {});
 
   const balance = balances[selectedToken] || 0;
-
   const MIN_WITHDRAW = 1;
 
-  // 💸 withdraw handler
-  const handleWithdrawConfirm = () => {
+  const handleWithdrawConfirm = async () => {
     const amount = parseFloat(withdrawAmount);
-
     if (isNaN(amount)) return;
 
     if (amount < MIN_WITHDRAW) {
@@ -66,7 +53,7 @@ export default function WalletOverview({ onNavigate }) {
 
     triggerHaptic?.('impact');
 
-    ledgerStore.addEvent({
+    await addEvent({
       type: 'withdraw',
       userId,
       username: user?.username || 'anonymous',
@@ -80,107 +67,68 @@ export default function WalletOverview({ onNavigate }) {
     setWithdrawAmount('');
 
     const botUrl = 'https://t.me/SwiftyEx_bot';
-
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.openTelegramLink(botUrl);
-    } else {
-      window.open(botUrl, '_blank');
-    }
+    if (window.Telegram?.WebApp) window.Telegram.WebApp.openTelegramLink(botUrl);
+    else window.open(botUrl, '_blank');
 
     setTimeout(() => onNavigate('withdrawals'), 500);
   };
 
   return (
-    <div className="space-y-5 p-4 text-left">
+    <div className="space-y-4 p-4 text-left w-full max-w-md mx-auto animate-reveal">
+      <BackButton onBack={() => onNavigate('dashboard')} fallbackText="Dashboard" />
+      <div className="space-y-0.5">
+        <h2 className="text-xl font-black tracking-tight text-white">Wallet</h2>
+        <p className="text-xs text-zinc-500 font-mono">ID: {userId || "LOCAL_NODE"}</p>
+      </div>
 
-      <BackButton onBack={() => onNavigate('claim')} />
-
-      <h2 className="text-xl font-bold">Wallet Overview</h2>
-
-      {/* TOKEN SELECTOR */}
-      <div className="flex gap-2">
-        {['USDT', 'USDC'].map(token => (
+      <div className="flex gap-1.5 bg-zinc-950/60 p-1 border border-white/5 rounded-xl w-max">
+        {['USDT', 'USDC'].map(t => (
           <button
-            key={token}
-            onClick={() => setSelectedToken(token)}
-            className={`px-3 py-1 rounded-lg text-xs font-bold border ${
-              selectedToken === token
-                ? 'bg-green-500 text-black'
-                : 'bg-zinc-900 border-zinc-800'
+            key={t}
+            onClick={() => setSelectedToken(t)}
+            className={`px-3 py-1 rounded-lg text-[10px] font-mono font-black transition-all cursor-pointer ${
+              selectedToken === t ? 'bg-brand-accent text-white shadow-md' : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            {token}
+            {t}
           </button>
         ))}
       </div>
 
-      {/* BALANCE */}
-      <GlassCard className="p-4">
-        <p className="text-xs text-zinc-400">
-          Available {selectedToken} Balance
-        </p>
-        <h3 className="text-3xl font-black text-white">
-          {balance.toFixed(2)} {selectedToken}
+      <GlassCard className="p-4 bg-zinc-900/20 border-white/5 rounded-xl flex flex-col gap-0.5">
+        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Settled {selectedToken} Assets</p>
+        <h3 className="text-3xl font-mono font-black text-white tracking-tight">
+          {balance.toFixed(2)} <span className="text-xs font-sans text-zinc-500">{selectedToken}</span>
         </h3>
       </GlassCard>
 
-      {/* WITHDRAW BUTTON */}
-      <Button
-        onClick={() => setShowModal(true)}
-        className="w-full bg-green-500 text-black font-bold"
-      >
-        Withdraw {selectedToken}
+      <Button onClick={() => setShowModal(true)} className="w-full font-black py-3.5 text-xs uppercase tracking-widest bg-brand-success text-black">
+        Withdraw to SwiftyEx Ledger
       </Button>
 
-      {/* NAV */}
-      <div className="space-y-2">
-        <Button onClick={() => onNavigate('earnings')}>
-          View Earnings History
-        </Button>
-
-        <Button onClick={() => onNavigate('withdrawals')}>
-          View Withdrawals
-        </Button>
+      <div className="grid grid-cols-2 gap-2 pt-2">
+        <Button variant="secondary" onClick={() => onNavigate('earnings')} className="py-2.5 text-xs font-bold">History</Button>
+        <Button variant="secondary" onClick={() => onNavigate('withdrawals')} className="py-2.5 text-xs font-bold">Withdrawals</Button>
       </div>
 
-      {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-
-          <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl w-full max-w-sm space-y-4">
-
-            <h3 className="text-lg font-bold">
-              Withdraw {selectedToken}
-            </h3>
-
-            <p className="text-xs text-zinc-400">
-              Min: {MIN_WITHDRAW} | Max: {balance.toFixed(2)} {selectedToken}
-            </p>
-
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-xs animate-reveal">
+          <div className="bg-zinc-950 border border-white/5 p-5 rounded-2xl w-full max-w-xs space-y-4 shadow-2xl text-left">
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-bold text-white">Initiate Withdrawal</h3>
+              <p className="text-[10px] text-zinc-500 font-mono">Max: {balance.toFixed(2)} {selectedToken}</p>
+            </div>
             <input
               type="number"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              placeholder="Enter amount"
-              className="w-full p-3 rounded-lg bg-zinc-800 text-white outline-none"
+              placeholder="0.00"
+              className="w-full p-3 font-mono font-bold text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-700"
             />
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 py-2 bg-zinc-800 rounded-lg"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleWithdrawConfirm}
-                className="flex-1 py-2 bg-green-500 text-black font-bold rounded-lg"
-              >
-                Confirm
-              </button>
+            <div className="flex gap-2 text-xs font-bold pt-1">
+              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-850 rounded-xl text-zinc-400">Cancel</button>
+              <button onClick={handleWithdrawConfirm} className="flex-1 py-2.5 bg-brand-accent text-white rounded-xl shadow-lg shadow-brand-accent/10">Confirm</button>
             </div>
-
           </div>
         </div>
       )}
