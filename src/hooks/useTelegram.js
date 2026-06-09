@@ -58,30 +58,27 @@ export function useTelegram() {
     return () => clearTimeout(timer);
   }, []);
 
-  const triggerHaptic = (type = 'light') => {
-    if (!tg?.HapticFeedback) return;
+  const triggerHaptic = (type = 'impact') => {
+  const haptic = window.Telegram?.WebApp?.HapticFeedback;
 
-    try {
-      switch (type) {
-        case 'impact':
-          tg.HapticFeedback.impactOccurred('medium');
-          break;
+  if (!haptic || typeof haptic !== 'object') return; // ❌ not supported
 
-        case 'success':
-          tg.HapticFeedback.notificationOccurred('success');
-          break;
-
-        case 'warning':
-          tg.HapticFeedback.notificationOccurred('warning');
-          break;
-
-        default:
-          tg.HapticFeedback.impactOccurred('light');
-      }
-    } catch (error) {
-      console.error('Haptic error:', error);
+  try {
+    if (type === 'impact') {
+      haptic.impactOccurred?.('medium');
     }
-  };
+
+    if (type === 'success') {
+      haptic.notificationOccurred?.('success');
+    }
+
+    if (type === 'warning') {
+      haptic.notificationOccurred?.('warning');
+    }
+  } catch (e) {
+    // silently fail
+  }
+};
 
   return {
     tg,

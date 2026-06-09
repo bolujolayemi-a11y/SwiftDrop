@@ -4,6 +4,7 @@ import Navbar from '@/components/layout/Navbar';
 import PageWrapper from '@/components/layout/PageWrapper';
 import Router from '@/app/router';
 import { useTelegram } from '@/hooks/useTelegram';
+import { dropApi } from '@/services/dropApi';
 import { dropStore } from '@/features/drops/dropStore';
 
 export default function App() {
@@ -49,7 +50,10 @@ export default function App() {
 
         if (startParam) {
           setCurrentDropId(startParam);
-          dropStore.incrementClickCount?.(startParam);
+          dropApi.addEvent({
+          type: "click",
+          dropId: startParam,
+          userId: tg?.initDataUnsafe?.user?.id});
           setCurrentPage('deeplink');
           setInitialized(true);
           return;

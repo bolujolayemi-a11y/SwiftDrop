@@ -75,7 +75,7 @@ export default function DropDetails({ id, onNavigate, setDropId }) {
         <div className="p-3 bg-zinc-950/40 border border-white/5 rounded-xl flex items-start gap-2 text-xs text-zinc-400 text-left leading-normal">
           <Info className="h-4 w-4 text-brand-accent shrink-0 mt-0.5" />
           <span>
-            Financial verification and atomic settlements execute instantaneously via decentralized ledger queries through the <strong>SwiftyEx_bot</strong> backplane.
+            Rewards are funded through <strong>SwiftyEx_bot</strong> and distributed instantly to eligible users after verification.
           </span>
         </div>
 

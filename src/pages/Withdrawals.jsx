@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import BackButton from '@/components/ui/BackButton';
 import GlassCard from '@/components/ui/GlassCard';
-import { ledgerStore } from '@/features/ledger/ledgerStore';
+import { getWithdrawals } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
 
 export default function Withdrawals({ onNavigate }) {
@@ -11,20 +11,15 @@ export default function Withdrawals({ onNavigate }) {
   const [withdrawals, setWithdrawals] = useState([]);
   const [selectedToken, setSelectedToken] = useState('USDT');
 
-  useEffect(() => {
+    useEffect(() => {
     if (!userId) return;
 
-    const load = () => {
-      setWithdrawals(ledgerStore.getWithdrawals(userId));
+    const load = async () => {
+      const data = await getWithdrawals(userId);
+      setWithdrawals(data?.data || []);
     };
 
     load();
-
-    const unsubscribe = ledgerStore.subscribe(() => {
-      load();
-    });
-
-    return unsubscribe;
   }, [userId]);
 
   // 🧠 FILTER BY TOKEN

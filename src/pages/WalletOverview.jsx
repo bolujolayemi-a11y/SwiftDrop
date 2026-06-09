@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import BackButton from '@/components/ui/BackButton';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
-import { ledgerStore } from '@/features/ledger/ledgerStore';
+import { getWallet } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
 
 export default function WalletOverview({ onNavigate }) {
@@ -13,15 +13,20 @@ export default function WalletOverview({ onNavigate }) {
   const [showModal, setShowModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('USDT');
-
+  
   useEffect(() => {
     if (!userId) return;
 
-    setEvents(ledgerStore.getUserEvents(userId));
+    const load = async () => {
+      const data = await getWallet(userId);
+      setEvents(data?.events || []);
+    };
 
-    return ledgerStore.subscribe(() => {
-      setEvents(ledgerStore.getUserEvents(userId));
-    });
+    load();
+
+    const interval = setInterval(load, 3000);
+
+    return () => clearInterval(interval);
   }, [userId]);
 
   // 🧠 GROUP BALANCES BY TOKEN

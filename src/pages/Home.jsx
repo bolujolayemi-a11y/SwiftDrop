@@ -35,7 +35,7 @@ export default function Home({ onNavigate, setDropId }) {
           <Sparkles className="h-3 w-3" /> Settlement Engine Active
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight bg-linear-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent leading-tight">
-          Instant Claim Links. <br/>Infinte Group Growth.
+          Instant Claim Links. <br/>Infinite Group Growth
         </h1>
         <p className="text-sm text-zinc-400 max-w-xs mx-auto font-normal leading-relaxed">
           Create premium, instant payout campaigns funded cleanly with <span className="text-white font-medium">SwiftyEx_bot</span>.
@@ -107,7 +107,11 @@ export default function Home({ onNavigate, setDropId }) {
 
                   <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between gap-4">
                     <div className="flex-1 bg-zinc-900 h-1.5 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full bg-brand-success" style={{ width: `${(drop.claimedCount / drop.winnersCount) * 100}%` }} />
+                      <div className="h-full rounded-full bg-brand-success" style={{ width: `${
+                          drop.winnersCount
+                          ? (drop.claimedCount / drop.winnersCount) * 100
+                          : 0
+                         }%` }} />
                     </div>
                     <button className="claim-btn-trigger text-xs font-black text-brand-accent hover:text-blue-400 flex items-center gap-0.5 transition-colors shrink-0 cursor-pointer">
                       🚀 Express Claim <ArrowRight className="h-3 w-3 ml-0.5" />

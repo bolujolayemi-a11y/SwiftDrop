@@ -65,12 +65,9 @@ export default function VerifyAction({ id, onNavigate }) {
       window.open(shareUrl, '_blank');
     }
 
-    // Simulate link sharing confirmation loop
-    setTimeout(() => {
+    tg.openLink(shareUrl);
+
       setHasShared(true);
-      setIsSharing(false);
-      triggerHaptic('success');
-    }, 1500);
   };
 
     const handleVerifySubmission = () => {
