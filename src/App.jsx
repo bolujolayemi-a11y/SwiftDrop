@@ -15,71 +15,30 @@ export default function App() {
   const [routeParams, setRouteParams] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
-    console.log(window.Telegram.WebApp.initData);
   useEffect(() => {
     const initApp = () => {
       try {
-        /**
-         * =========================
-         * 1. HANDLE RETURN FROM WITHDRAW FIRST (HIGHEST PRIORITY)
-         * =========================
-         */
-        const returnState = sessionStorage.getItem('returnFromWithdraw');
-
-        if (returnState) {
-          const parsed = JSON.parse(returnState);
-          sessionStorage.removeItem('returnFromWithdraw');
-
-          if (parsed?.dropId) {
-            setCurrentDropId(parsed.dropId);
-            setCurrentPage(parsed.page || 'claim');
-            setInitialized(true);
-            return;
-          }
-        }
-
-        /**
-         * =========================
-         * 2. HANDLE TELEGRAM DEEP LINK
-         * =========================
-         */
         const webApp = window.Telegram?.WebApp;
 
-        const startParam =
+        const rawStartParam =
           webApp?.initDataUnsafe?.start_param ||
-          tg?.initDataUnsafe?.start_param;
+          tg?.initDataUnsafe?.start_param ||
+          new URLSearchParams(window.location.search).get('startapp');
 
-        if (startParam) {
-          setCurrentDropId(startParam);
-          dropApi.addEvent({
-          type: "click",
-          dropId: startParam,
-          userId: tg?.initDataUnsafe?.user?.id});
-          setCurrentPage('deeplink');
+        if (rawStartParam) {
+          let dropId = rawStartParam;
+
+          // normalize formats
+          if (dropId.startsWith('drop_')) dropId = dropId.replace('drop_', '');
+          if (dropId.startsWith('claim_')) dropId = dropId.replace('claim_', '');
+
+          setCurrentDropId(dropId);
+          setCurrentPage('claim'); // IMPORTANT
+
           setInitialized(true);
           return;
         }
 
-        /**
-         * =========================
-         * 3. HANDLE WEB URL PARAMS
-         * =========================
-         */
-        const urlParams = new URLSearchParams(window.location.search);
-
-        const webStartParam =
-          urlParams.get('startapp') ||
-          urlParams.get('dropId');
-
-        if (webStartParam) {
-          setCurrentDropId(webStartParam);
-          dropStore.incrementClickCount?.(webStartParam);
-          setCurrentPage('deeplink');
-          setInitialized(true);
-          return;
-        }
-
-        
         setInitialized(true);
       } catch (err) {
         console.error('App init error:', err);
@@ -103,10 +62,7 @@ export default function App() {
     <Providers>
       <PageWrapper>
         {currentPage !== 'deeplink' && (
-          <Navbar
-            onNavigate={handleNavigation}
-            currentPage={currentPage}
-          />
+          <Navbar onNavigate={handleNavigation} currentPage={currentPage} />
         )}
 
         <Router

@@ -4,7 +4,7 @@ import { addEvent } from '@/api/ledgerApi';
 import { useTelegram } from '@/hooks/useTelegram';
 import BackButton from '@/components/ui/BackButton';
 import Button from '@/components/ui/Button';
-import { Gift, CheckCircle, Share2, Users, AlertCircle, Sparkles } from 'lucide-react';
+import { Gift, CheckCircle, Share2, Users, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
@@ -16,201 +16,143 @@ export default function ClaimReward({ id, onNavigate }) {
   const [state, setState] = useState('idle');
   const [amount, setAmount] = useState('0.00');
   const [status, setStatus] = useState('');
-  const [shareVerified, setShareVerified] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   const token = drop?.token || 'USDT';
 
-  const [isVerified, setIsVerified] = useState(false);
-    useEffect(() => {
-      try {
-        const verification = sessionStorage.getItem(
-          `swifty_verified_${id}`
-        );
-
-        if (verification) {
-          const parsed = JSON.parse(verification);
-          setIsVerified(parsed?.verified === true);
-        }
-      } catch {
-        setIsVerified(false);
-      }
-    }, [id]);
-
+  // ✅ FIXED VERIFICATION (single source of truth)
   useEffect(() => {
-    if (!drop || !userId) return;
-  }, [drop, userId]);
+    try {
+      const raw = sessionStorage.getItem(`swifty_verified_${id}`);
+      const parsed = raw ? JSON.parse(raw) : null;
+      setIsVerified(parsed?.verified === true);
+    } catch {
+      setIsVerified(false);
+    }
+  }, [id]);
 
-  const fireConfetti = () => {
-    const end = Date.now() + 900;
-
-    const frame = () => {
-      confetti({
-        particleCount: 6,
-        spread: 70,
-        gravity: 0.9,
-        ticks: 200,
-        origin: { x: Math.random(), y: Math.random() * 0.4 }
-      });
-
-      if (Date.now() < end) requestAnimationFrame(frame);
-    };
-
-    frame();
-  };
-
+  
   const handleShareVerify = () => {
     const link =
-      `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=${drop.id}&text=I’m unlocking rewards 🚀`;
+      `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=drop_${drop.id}&text=I’m unlocking rewards 🚀`;
 
     if (tg?.openLink) tg.openLink(link);
     else window.open(link, '_blank');
 
     sessionStorage.setItem(
-      `swifty_share_${id}`,
+      `swifty_verified_${id}`,
       JSON.stringify({ verified: true })
     );
 
-    setShareVerified(true);
+    setIsVerified(true); // IMPORTANT UI UPDATE
     triggerHaptic('success');
   };
 
-  const handleClaim = async () => {
-    if (state !== 'idle') return;
-    if (!userId || !drop) return;
-
+  const handleClaim = () => {
     if (!isVerified) {
       triggerHaptic('warning');
       return;
     }
 
-    triggerHaptic('impact');
     setState('rolling');
 
-    const fakeStatuses = [
-      'Checking your entry...',
-      'Unlocking your reward...',
-      'Almost there...',
-      'Claiming reward...'
-    ];
-
-    let i = 0;
-
-    const interval = setInterval(() => {
-      setStatus(fakeStatuses[i % fakeStatuses.length]);
-      i++;
-    }, 450);
-
-    const roll = setInterval(() => {
-      setAmount((Math.random() * 50 + 1).toFixed(2));
-    }, 70);
-
-    setTimeout(async () => {
-      clearInterval(interval);
-      clearInterval(roll);
-
-     const reward = await dropApi.claimDrop({
-        dropId: drop.id,
-        userId
+    setTimeout(() => {
+      const result = dropStore.claimDrop(drop.id, {
+        userId,
+        username: user?.username || 'user'
       });
-      setAmount(reward.amount);
 
-      await addEvent({
+      if (!result?.success) {
+        setState('idle');
+        return;
+      }
+
+      const finalAmount = result.amountClaimed || '0.00';
+
+      setAmount(finalAmount);
+
+      addEvent({
         type: 'claim',
         userId,
         username: user?.username || 'user',
         dropId: drop.id,
-        amount: reward.amount,
+        amount: finalAmount,
         token,
         timestamp: Date.now()
       });
 
       setState('revealed');
+      confetti();
       triggerHaptic('success');
-      fireConfetti();
     }, 2000);
   };
 
-  const handleCancel = () => {
-    setState('idle');
-    setStatus('');
-  };
-
-  const blueButton =
-    "w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 active:scale-95 transition flex items-center justify-center gap-2";
-
   if (!drop) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] text-center p-6">
-        <AlertCircle className="h-8 w-8 text-zinc-600 mx-auto" />
-        <p className="text-zinc-400 text-sm font-medium">Drop not found</p>
+      <div className="p-6 text-center text-zinc-400">
+        <AlertCircle className="mx-auto mb-2" />
+        Drop not found
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 pt-3 flex flex-col min-h-[82vh]">
+    <div className="max-w-md mx-auto px-4 pt-4">
 
-      <BackButton onBack={() => onNavigate('home')} fallbackText="Back" />
+      <BackButton onBack={() => onNavigate('home')} />
 
-      <div className="text-center space-y-2 pt-3">
-        <h2 className="text-2xl font-black text-white">
-          {state === 'revealed' ? 'Reward Unlocked' : drop.title}
-        </h2>
-        {status && <p className="text-xs text-blue-400 animate-pulse">{status}</p>}
-      </div>
+      <h2 className="text-xl font-bold text-center mt-3">
+        {state === 'revealed' ? 'Reward Unlocked' : drop.title}
+      </h2>
 
-      <div className="flex flex-1 items-center justify-center">
+      <div className="flex flex-col items-center mt-10">
+
         {state === 'idle' && (
-          <div className="flex flex-col items-center gap-4 w-full">
-
+          <>
             <div
               onClick={handleClaim}
-              className={`h-44 w-44 rounded-full flex flex-col items-center justify-center bg-zinc-900 border ${
-                isVerified ? 'border-blue-500 cursor-pointer' : 'opacity-50'
+              className={`h-44 w-44 flex items-center justify-center rounded-full border cursor-pointer ${
+                isVerified ? 'border-blue-500' : 'opacity-40'
               }`}
             >
-              <Gift className="h-10 w-10 text-blue-400" />
-              <span className="text-xs mt-2 text-zinc-400">
-                {isVerified ? 'Claim Reward' : 'Share to Unlock'}
-              </span>
+              <Gift className="text-blue-500" />
             </div>
 
             {!isVerified ? (
-              <div className="w-full space-y-3 text-center">
+              <div className="mt-4 w-full space-y-3">
 
                 <button
                   onClick={handleShareVerify}
-                  className={blueButton}
+                  className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl"
                 >
-                  <Share2 className="h-4 w-4" />
                   Share to Unlock Reward
                 </button>
 
-                {/* 👇 MOVED CANCEL UNDER SHARE BUTTON */}
+                {/* ✅ FIXED CANCEL BUTTON */}
                 <button
-                  onClick={handleCancel}
-                  className="text-xs text-zinc-500 underline"
+                  onClick={() => setState('idle')}
+                  className="w-full py-3 bg-gradient-to-r from-blue-400 to-indigo-500 text-white rounded-xl"
                 >
                   Cancel
                 </button>
 
               </div>
             ) : (
-              <p className="text-xs text-green-400">
+              <p className="text-green-400 text-sm mt-3">
                 Verified — you can claim now
               </p>
             )}
-          </div>
+          </>
         )}
 
         {state === 'rolling' && (
-          <p className="text-4xl font-bold text-white">${amount}</p>
+          <p className="text-4xl font-bold">${amount}</p>
         )}
 
         {state === 'revealed' && (
-          <div className="text-center space-y-3">
-            <CheckCircle className="h-14 w-14 text-green-500 mx-auto" />
-            <h3 className="text-4xl font-bold">
+          <div className="text-center mt-10">
+            <CheckCircle className="text-green-500 mx-auto" size={50} />
+            <h3 className="text-3xl font-bold mt-2">
               +{amount} {token}
             </h3>
           </div>

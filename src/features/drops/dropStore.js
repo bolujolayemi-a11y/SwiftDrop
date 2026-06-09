@@ -1,21 +1,33 @@
 import { INTERACTIVE_DEMOS } from '@/data/mockDrops';
 
+const STORAGE_KEY = 'swifty_drops';
+
+function loadDrops() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveDrops(drops) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(drops));
+}
+
 export const dropStore = {
-  drops: [],
+  drops: loadDrops(),
   demos: INTERACTIVE_DEMOS,
   listeners: [],
 
-  // READ ALL DROPS
   getDrops() {
+    this.drops = loadDrops(); // always sync
     return this.drops;
   },
 
-  // READ DEMOS
   getDemos() {
     return this.demos;
   },
 
-  // ADD DROP
   addDrop(drop) {
     const newDrop = {
       id: Date.now().toString(),
@@ -27,27 +39,39 @@ export const dropStore = {
     };
 
     this.drops.unshift(newDrop);
+    saveDrops(this.drops);     // ✅ SAVE
     this.notify();
+
     return newDrop;
   },
 
-  // GET SINGLE DROP
   getDropById(id) {
-    return this.drops.find(d => d.id === id) || null;
+    const drops = loadDrops();  // ✅ ALWAYS FRESH
+    const demos = this.demos;
+
+    return (
+      drops.find(d => d.id === id) ||
+      demos.find(d => d.id === id) ||
+      null
+    );
   },
 
   hasUserClaimed(userId, dropId) {
-  return false;
+    return false;
   },
-  
+
   claimDrop(id, { userId, username }) {
-    const drop = this.getDropById(id);
+    const drops = loadDrops();
+    const drop = drops.find(d => d.id === id);
+
     if (!drop) return { success: false };
 
     const amountClaimed = (Math.random() * 50 + 1).toFixed(2);
 
     drop.claimedCount = (drop.claimedCount || 0) + 1;
 
+    saveDrops(drops);   // ✅ SAVE UPDATE
+    this.drops = drops;
     this.notify();
 
     return {
