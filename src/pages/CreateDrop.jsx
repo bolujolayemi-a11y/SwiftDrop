@@ -109,7 +109,7 @@ export default function CreateDrop({ onNavigate }) {
       return;
     }
 
-    const newDrop = dropStore.addDrop({
+    const newDrop = await dropStore.addDrop({
       title,
       description: description || "No campaign data provided by creator setup.",
       amount: parseFloat(amount).toFixed(2),
