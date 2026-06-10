@@ -18,7 +18,6 @@ export default function ClaimReward({ id, onNavigate }) {
   const [amount, setAmount] = useState('0.00');
   const [status, setStatus] = useState('');
   
-  // State management vectors for sequential quiz gating
   const [isTriviaSolved, setIsTriviaSolved] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [triviaError, setTriviaError] = useState(false);
@@ -27,8 +26,12 @@ export default function ClaimReward({ id, onNavigate }) {
   const token = drop?.token || 'USDT';
   const hasTrivia = !!drop?.trivia?.question;
 
+  // 🔄 PERSISTENCE MOUNT LOOP
   useEffect(() => {
+    if (!drop) return;
+
     try {
+      // 1. Check if they have an active session signature verified
       const raw = sessionStorage.getItem(`verified_${id}`);
       const parsed = raw ? JSON.parse(raw) : null;
       
@@ -36,10 +39,23 @@ export default function ClaimReward({ id, onNavigate }) {
         setIsVerified(true);
         setIsTriviaSolved(true);
       }
-    } catch {
-      setIsVerified(false);
+
+      // 2. Check if this profile has already claimed a share from this drop
+      const dropHistory = drop.analytics?.history || [];
+      const myClaimRecord = dropHistory.find(
+        record => record.userId === userId || (record.username && user?.username && record.username === user.username)
+      );
+
+      if (myClaimRecord) {
+        setAmount(myClaimRecord.amount);
+        setState('revealed'); // Force the unlocked screen layout instantly
+        setIsTriviaSolved(true);
+        setIsVerified(true);
+      }
+    } catch (err) {
+      console.error("State hydration error:", err);
     }
-  }, [id]);
+  }, [id, drop, userId, user?.username]);
 
   const handleTriviaSubmit = () => {
     if (selectedOption === null) return;
@@ -167,7 +183,6 @@ export default function ClaimReward({ id, onNavigate }) {
             </div>
           </GlassCard>
 
-          {/* Context Banner Verification Indicator Block */}
           <div className={`p-3.5 rounded-xl border flex items-center gap-3 transition-colors ${
             isVerified ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400' : 'bg-amber-500/5 border-amber-500/10 text-amber-400'
           }`}>
@@ -188,7 +203,6 @@ export default function ClaimReward({ id, onNavigate }) {
             {state === 'idle' && (
               <div className="w-full flex flex-col items-center space-y-5 animate-reveal">
                 
-                {/* PHASE 1: TRIVIA QUIZ INTERFACE BLOCK */}
                 {hasTrivia && !isTriviaSolved && (
                   <div className="w-full max-w-sm space-y-4 text-left animate-reveal">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-brand-accent uppercase tracking-widest border-b border-white/5 pb-2">
@@ -231,7 +245,6 @@ export default function ClaimReward({ id, onNavigate }) {
                   </div>
                 )}
 
-                {/* PHASE 2 & 3: SHARING TRIGGER AND CLAIMS BUTTON */}
                 {(!hasTrivia || isTriviaSolved) && (
                   <div className="flex flex-col items-center space-y-6 w-full animate-reveal">
                     <div
@@ -257,7 +270,6 @@ export default function ClaimReward({ id, onNavigate }) {
                           Share to Unlock
                         </button>
                         
-                        {/* ✅ ADDED PROPER CANCEL BUTTON */}
                         <button
                           type="button"
                           onClick={() => onNavigate('home')}
@@ -312,7 +324,7 @@ export default function ClaimReward({ id, onNavigate }) {
                   </Button>
 
                   <Button variant="ghost" className="w-full text-xs font-semibold text-zinc-500 py-1.5" onClick={() => onNavigate('leaderboard')}>
-                   View Leaderboard
+                    View Leaderboard
                   </Button>
                 </div>
               </div>
