@@ -15,6 +15,10 @@ export default function WalletOverview({ onNavigate }) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState('USDT');
 
+  // ⚡ SIMULATION STATES FOR OUTBOUND TRANSACTIONS
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simStatusText, setSimStatusText] = useState('');
+
   useEffect(() => {
     const computeLocalWalletData = () => {
       const allDrops = dropStore.getDrops();
@@ -84,8 +88,21 @@ export default function WalletOverview({ onNavigate }) {
     }
 
     triggerHaptic?.('impact');
+    setIsSimulating(true);
 
     try {
+      // 👤 Step 1: Simulate checking user compliance tiers via SwiftyEx backend
+      setSimStatusText('Validating KYC clearing level...');
+      const profileData = await dropApi.getSwiftyProfile();
+      const kycLevel = profileData?.kyc_level || 1;
+      
+      await new Promise(resolve => setTimeout(resolve, 900));
+
+      // 📡 Step 2: Initialize transaction pipeline channels
+      setSimStatusText(`Routing via SwiftyEx automated nodes...`);
+      await new Promise(resolve => setTimeout(resolve, 900));
+
+      // 💾 Step 3: Write structural storage event metrics downstream
       const currentWithdrawals = JSON.parse(localStorage.getItem(`swifty_withdrawals_${userId}`) || '[]');
       const newWithdrawal = {
         id: Date.now(),
@@ -96,10 +113,8 @@ export default function WalletOverview({ onNavigate }) {
         timestamp: Date.now()
       };
       
-      // Sync local file records
       localStorage.setItem(`swifty_withdrawals_${userId}`, JSON.stringify([newWithdrawal, ...currentWithdrawals]));
       
-      // Ping network endpoint
       if (dropApi?.addEvent) {
         await dropApi.addEvent({
           type: 'withdraw',
@@ -110,13 +125,21 @@ export default function WalletOverview({ onNavigate }) {
           timestamp: Date.now()
         });
       }
+
+      setSimStatusText('Transaction authorized! Redirecting...');
+      triggerHaptic?.('success');
+      await new Promise(resolve => setTimeout(resolve, 600));
+
     } catch (err) {
-      console.error(err);
+      console.error("Simulation pipeline interruption:", err);
+    } finally {
+      setIsSimulating(false);
+      setSimStatusText('');
+      setShowModal(false);
+      setWithdrawAmount('');
     }
 
-    setShowModal(false);
-    setWithdrawAmount('');
-
+    // 📲 Native Telegram Bridge Interface Redirection
     const botUrl = 'https://t.me/SwiftyEx_bot';
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.openTelegramLink(botUrl);
@@ -191,11 +214,33 @@ export default function WalletOverview({ onNavigate }) {
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full p-3 font-mono font-bold text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-700"
+              disabled={isSimulating}
+              className="w-full p-3 font-mono font-bold text-sm rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-700 disabled:opacity-50"
             />
             <div className="flex gap-2 text-xs font-bold pt-1">
-              <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-zinc-900 rounded-xl text-zinc-400">Cancel</button>
-              <button type="button" onClick={handleWithdrawConfirm} className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl shadow-lg">Confirm</button>
+              <button 
+                type="button" 
+                disabled={isSimulating}
+                onClick={() => setShowModal(false)} 
+                className="flex-1 py-2.5 bg-zinc-900 rounded-xl text-zinc-400 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                disabled={isSimulating}
+                onClick={handleWithdrawConfirm} 
+                className="flex-1 py-2.5 bg-blue-500 disabled:bg-blue-600/40 text-white rounded-xl shadow-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {isSimulating ? (
+                  <span className="flex items-center gap-1 animate-pulse font-medium text-[10px]">
+                    <div className="w-2.5 h-2.5 border-2 border-t-white border-white/20 rounded-full animate-spin" />
+                    {simStatusText}
+                  </span>
+                ) : (
+                  "Confirm"
+                )}
+              </button>
             </div>
           </div>
         </div>
