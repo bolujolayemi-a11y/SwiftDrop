@@ -10,9 +10,11 @@ import confetti from 'canvas-confetti';
 
 export default function ClaimReward({ id, onNavigate }) {
   const { user, triggerHaptic, tg } = useTelegram();
-
-  const drop = dropStore.getDropById(id);
   const userId = user?.id?.toString();
+
+  // 🔥 1. CRITICAL ASYNC FIX: Initialize local states for the network drop data
+  const [drop, setDrop] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [state, setState] = useState('idle');
   const [amount, setAmount] = useState('0.00');
@@ -23,6 +25,24 @@ export default function ClaimReward({ id, onNavigate }) {
   const [triviaError, setTriviaError] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
+  // 🔥 2. CRITICAL ASYNC FIX: Add a hook loop to unwrap your data object cleanly
+  useEffect(() => {
+    const fetchDropData = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        const result = await dropStore.getDropById(id);
+        setDrop(result);
+      } catch (err) {
+        console.error("Failed to load drop details over-the-air:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDropData();
+  }, [id]);
+
+  // 🔥 3. CRITICAL ASYNC FIX: Derive sub-properties down here so drop is guaranteed to exist
   const token = drop?.token || 'USDT';
   const hasTrivia = !!drop?.trivia?.question;
 
@@ -48,7 +68,7 @@ export default function ClaimReward({ id, onNavigate }) {
 
       if (myClaimRecord) {
         setAmount(myClaimRecord.amount);
-        setState('revealed'); // Force the unlocked screen layout instantly
+        setState('revealed'); 
         setIsTriviaSolved(true);
         setIsVerified(true);
       }
@@ -58,7 +78,7 @@ export default function ClaimReward({ id, onNavigate }) {
   }, [id, drop, userId, user?.username]);
 
   const handleTriviaSubmit = () => {
-    if (selectedOption === null) return;
+    if (selectedOption === null || !drop?.trivia) return;
     
     if (Number(selectedOption) === Number(drop.trivia.correctIndex)) {
       setIsTriviaSolved(true);
@@ -71,6 +91,7 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   const handleShareVerify = () => {
+    if (!drop) return;
     const link = `https://t.me/share/url?url=https://t.me/swift_dropbot/app?startapp=drop_${drop.id}&text=Unlocking rewards 🚀`;
 
     tg?.openLink ? tg.openLink(link) : window.open(link, '_blank');
@@ -81,7 +102,7 @@ export default function ClaimReward({ id, onNavigate }) {
   };
 
   const handleClaim = () => {
-    if (!isVerified) return triggerHaptic('warning');
+    if (!isVerified || !drop) return triggerHaptic('warning');
 
     setState('rolling');
 
@@ -142,8 +163,17 @@ export default function ClaimReward({ id, onNavigate }) {
     }, 3000);
   };
 
+  // 🔥 4. CRITICAL ASYNC FIX: Add structural loading barriers to prevent rendering layout empty blanks
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-zinc-500 font-mono text-xs animate-pulse">
+        ⚡ Resolving multi-device pool allocation variables...
+      </div>
+    );
+  }
+
   if (!drop) {
-    return <p className="p-6 text-center text-zinc-400">Drop not found</p>;
+    return <p className="p-6 text-center text-zinc-400 font-mono text-xs">Drop context not resolved or link is broken.</p>;
   }
 
   const handleBack = () => {

@@ -5,7 +5,24 @@ import BackButton from '@/components/ui/BackButton';
 import { TrendingUp, Clock, Radio, Users } from 'lucide-react';
 
 export default function CampaignAnalytics({ id, onNavigate }) {
-  const drop = dropStore.getDropById(id);
+  // 🧠 Local state definition
+  const [drop, setDrop] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const resolveAnalytics = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      const result = await dropStore.getDropById(id);
+      setDrop(result);
+      setIsLoading(false);
+    };
+    resolveAnalytics();
+  }, [id]);
+
+  if (isLoading) {
+    return <p className="p-6 text-center text-zinc-400 font-mono text-xs animate-pulse">📊 Synchronizing real-time analytics stream...</p>;
+  }
 
   if (!drop) {
     return (

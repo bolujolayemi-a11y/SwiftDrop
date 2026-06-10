@@ -6,7 +6,23 @@ import { dropStore } from '@/features/drops/dropStore';
 import { Share2, Wallet, Users, Info } from 'lucide-react';
 
 export default function DropDetails({ id, onNavigate, setDropId }) {
-  const drop = dropStore.getDropById(id);
+  const [drop, setDrop] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      const result = await dropStore.getDropById(id);
+      setDrop(result);
+      setIsLoading(false);
+    };
+    fetchDetails();
+  }, [id]);
+
+  if (isLoading) {
+    return <p className="p-6 text-center text-zinc-400 font-mono text-xs animate-pulse">⚡ Loading pool configuration matrix...</p>;
+  }
 
   if (!drop) {
     return (
@@ -16,7 +32,6 @@ export default function DropDetails({ id, onNavigate, setDropId }) {
       </div>
     );
   }
-
   // 🚀 High-Fidelity Viral Share Mechanism
   const handleShareCampaign = () => {
     const appUrl = `https://t.me/swift_dropbot/app?startapp=${drop.id}`;
