@@ -149,7 +149,8 @@ export default function CreateDrop({ onNavigate }) {
     const merchantUid = user?.id || "SYSTEM_LOCAL";
 
     return (
-      <div className="w-full max-w-md mx-auto px-4 pt-3 space-y-5 animate-reveal text-zinc-100 text-left">
+      /* 🖥️ Responsive outer wrapper scales to 2xl on desktop for immersive full screen spacing */
+      <div className="w-full max-w-md md:max-w-2xl mx-auto px-4 pt-3 space-y-5 animate-reveal text-zinc-100 text-left">
         <div className="flex items-center gap-3 border-b border-zinc-900 pb-3">
           <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
             <Check className="h-5 w-5" />
@@ -202,7 +203,8 @@ export default function CreateDrop({ onNavigate }) {
   }
 
   return (
-    <div className="space-y-4 pt-2 w-full max-w-md mx-auto px-4 text-left animate-reveal">
+    /* 🖥️ Max width scales out smoothly to 5xl on desktop viewports */
+    <div className="space-y-4 pt-2 w-full max-w-md md:max-w-5xl mx-auto px-4 text-left animate-reveal">
       <BackButton onBack={() => onNavigate('dashboard')} fallbackText="Back to Workspace" />
       
       <div className="space-y-0.5">
@@ -210,175 +212,185 @@ export default function CreateDrop({ onNavigate }) {
         <p className="text-xs text-zinc-500">Send instant rewards. Grow your community.</p>
       </div>
 
-      <GlassCard className="border-brand-accent/20 bg-zinc-950/10 space-y-2.5 p-4 rounded-xl">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-brand-accent uppercase tracking-wider">
-          <Sparkles className="h-3.5 w-3.5" /> Campaign Prompt Copilot
-        </div>
-        <div className="flex gap-2">
-          <input 
-            type="text" 
-            placeholder="Reward usdc for answering solana questions..." 
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
-            className="flex-1 bg-zinc-900/50 border border-zinc-800/80 px-3 py-2 rounded-xl text-xs outline-none text-white placeholder-zinc-600"
-          />
-          <button 
-            type="button"
-            onClick={handleAiGeneration}
-            disabled={isAiGenerating}
-            className="bg-brand-accent text-white rounded-xl px-4 text-xs font-bold hover:bg-blue-600 disabled:opacity-50 min-w-18.75 cursor-pointer"
-          >
-            {isAiGenerating ? "Processing..." : "Enter"}
-          </button>
-        </div>
-      </GlassCard>
-
-      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-        <Input 
-          label="Campaign Headline" 
-          placeholder="e.g. Welcome Incentive Pool" 
-          value={title} 
-          onChange={(e) => setTitle(e.target.value)} 
-          required 
-        />
+      {/* 💻 Splits layout beautifully on desktop so inputs sit side-by-side naturally without breaking phone styles */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
         
-        <div className="space-y-1.5">
-          <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Campaign Description</label>
-          <textarea 
-            rows={3}
-            placeholder="Describe action qualification benchmarks explicitly..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full bg-zinc-900/20 border border-zinc-800 focus:border-zinc-700 rounded-xl px-4 py-2.5 text-white text-xs outline-none resize-none placeholder-zinc-600"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Target Community Chat Link</label>
-          <input 
-            type="url"
-            placeholder="e.g., https://t.me/your_community_channel"
-            value={communityUrl}
-            onChange={(e) => setCommunityUrl(e.target.value)}
-            className="w-full bg-zinc-900/20 border border-zinc-800 focus:border-zinc-700 rounded-xl px-4 py-2.5 text-white text-xs outline-none placeholder-zinc-600"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="relative flex flex-col justify-end">
-            <Input 
-              label="Pool Capital Size" 
-              type="number" 
-              placeholder="100.00" 
-              value={amount} 
-              onChange={(e) => setAmount(e.target.value)} 
-              required 
-              className="pr-24" 
-            />
-            <div className="absolute right-1.5 bottom-1.5 flex items-center gap-1 bg-zinc-950/80 border border-white/5 p-1 rounded-lg h-8 z-10">
-              {['USDT', 'USDC'].map(t => (
-                <button
-                  type="button"
-                  key={t}
-                  onClick={() => setToken(t)}
-                  className={`text-[9px] font-mono font-black px-2 py-1 rounded transition-all cursor-pointer ${
-                    token === t ? 'bg-brand-accent text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
+        {/* Left Side: AI Copilot Section */}
+        <div className="md:col-span-4">
+          <GlassCard className="border-brand-accent/20 bg-zinc-950/10 space-y-2.5 p-4 rounded-xl h-full">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-brand-accent uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5" /> Campaign Prompt Copilot
             </div>
-          </div>
-
-          <Input 
-            label="Claim Slots" 
-            type="number" 
-            placeholder="50" 
-            value={winners} 
-            onChange={(e) => setWinners(e.target.value)} 
-            required 
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-2.5 pt-1">
-          <div onClick={() => { setIsMystery(!isMystery); triggerHaptic('impact'); }} className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${isMystery ? 'bg-amber-500/5 border-amber-500/20 text-white' : 'bg-zinc-900/10 border-zinc-800/60 text-zinc-500'}`}>
-            <div className="space-y-0.5 text-left max-w-[85%]">
-              <div className="text-xs font-bold text-amber-400">🎰 Mystery Mechanism</div>
-              <p className="text-[10px] text-zinc-500 leading-normal">Gamified rewards. Random payouts from a single pool.</p>
-            </div>
-            <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center ${isMystery ? 'bg-amber-500 border-transparent text-black' : 'border-zinc-700'}`}>{isMystery && <Check className="h-3 w-3 stroke-3" />}</div>
-          </div>
-
-          <div onClick={() => { setHasTrivia(!hasTrivia); triggerHaptic('impact'); }} className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${hasTrivia ? 'bg-brand-accent/5 border-brand-accent/20 text-white' : 'bg-zinc-900/10 border-zinc-800/60 text-zinc-500'}`}>
-            <div className="space-y-0.5 text-left max-w-[85%]">
-              <div className="text-xs font-bold text-brand-accent">🧠 Trivia Verification Gate</div>
-              <p className="text-[10px] text-zinc-500 leading-normal">Keep rewards for real humans with trivia verification.</p>
-            </div>
-            <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center ${hasTrivia ? 'bg-brand-accent border-transparent text-white' : 'border-zinc-700'}`}>{hasTrivia && <Check className="h-3 w-3 stroke-3" />}</div>
-          </div>
-        </div>
-
-        {hasTrivia && (
-          <GlassCard className="p-4 space-y-3 border-zinc-800 bg-zinc-950/40 rounded-xl animate-reveal">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Verification Quiz Question</label>
+            <div className="flex flex-col gap-2">
               <input 
                 type="text" 
-                required
-                placeholder="What protocol protects Swifty transactions?"
-                value={triviaQuestion} 
-                onChange={(e) => setTriviaQuestion(e.target.value)}
-                className="w-full bg-zinc-900/40 border border-zinc-800 rounded-xl p-2.5 text-xs font-medium text-white outline-none focus:border-zinc-700"
+                placeholder="Reward usdc for answering solana questions..." 
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                className="w-full bg-zinc-900/50 border border-zinc-800/80 px-3 py-2 rounded-xl text-xs outline-none text-white placeholder-zinc-600"
+              />
+              <button 
+                type="button"
+                onClick={handleAiGeneration}
+                disabled={isAiGenerating}
+                className="w-full bg-brand-accent text-white rounded-xl py-2 text-xs font-bold hover:bg-blue-600 disabled:opacity-50 cursor-pointer transition-colors"
+              >
+                {isAiGenerating ? "Processing..." : "Generate Structure"}
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Right Side: Main Campaign Setup Form */}
+        <form onSubmit={handleSubmit} className="md:col-span-8 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input 
+              label="Campaign Headline" 
+              placeholder="e.g. Welcome Incentive Pool" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              required 
+            />
+            
+            <div className="space-y-1.5">
+              <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Target Community Chat Link</label>
+              <input 
+                type="url"
+                placeholder="e.g., https://t.me/your_community_channel"
+                value={communityUrl}
+                onChange={(e) => setCommunityUrl(e.target.value)}
+                className="w-full bg-zinc-900/20 border border-zinc-800 focus:border-zinc-700 rounded-xl px-4 py-2.5 text-white text-xs outline-none placeholder-zinc-600"
               />
             </div>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Campaign Description</label>
+            <textarea 
+              rows={3}
+              placeholder="Describe action qualification benchmarks explicitly..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-zinc-900/20 border border-zinc-800 focus:border-zinc-700 rounded-xl px-4 py-2.5 text-white text-xs outline-none resize-none placeholder-zinc-600"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Options Grid (Max 4)</label>
-                {triviaOptions.length < 4 && (
-                  <button type="button" onClick={addOptionField} className="text-[10px] font-black text-brand-accent flex items-center gap-0.5 hover:underline cursor-pointer">
-                    <Plus className="h-3 w-3" /> Add Option
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative flex flex-col justify-end">
+              <Input 
+                label="Pool Capital Size" 
+                type="number" 
+                placeholder="100.00" 
+                value={amount} 
+                onChange={(e) => setAmount(e.target.value)} 
+                required 
+                className="pr-24" 
+              />
+              <div className="absolute right-1.5 bottom-1.5 flex items-center gap-1 bg-zinc-950/80 border border-white/5 p-1 rounded-lg h-8 z-10">
+                {['USDT', 'USDC'].map(t => (
+                  <button
+                    type="button"
+                    key={t}
+                    onClick={() => setToken(t)}
+                    className={`text-[9px] font-mono font-black px-2 py-1 rounded transition-all cursor-pointer ${
+                      token === t ? 'bg-brand-accent text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    {t}
                   </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2">
-                {triviaOptions.map((option, idx) => (
-                  <div key={idx} className="flex gap-2 items-center bg-zinc-900/20 border border-white/5 p-2 rounded-xl">
-                    <input 
-                      type="radio" 
-                      name="correctAnswer" 
-                      checked={correctIndex === idx} 
-                      onChange={() => setCorrectIndex(idx)} 
-                      className="w-3.5 h-3.5 accent-brand-accent cursor-pointer shrink-0 ml-1" 
-                    />
-                    <input 
-                      type="text" 
-                      required
-                      placeholder={`Choice Target #${idx + 1}`}
-                      value={option}
-                      onChange={(e) => handleOptionChange(idx, e.target.value)}
-                      className="flex-1 bg-zinc-950/40 border border-zinc-800 rounded-lg p-2 text-xs text-white outline-none focus:border-zinc-700"
-                    />
-                    {triviaOptions.length > 2 && (
-                      <button type="button" onClick={() => removeOptionField(idx)} className="p-1.5 text-zinc-600 hover:text-red-400 cursor-pointer">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
                 ))}
               </div>
             </div>
-          </GlassCard>
-        )}
 
-        <div className="pt-2">
-          <Button type="submit" className="w-full font-black py-3.5 text-xs uppercase tracking-wider">
-            Generate Campaign
-          </Button>
-        </div>
-      </form>
+            <Input 
+              label="Claim Slots" 
+              type="number" 
+              placeholder="50" 
+              value={winners} 
+              onChange={(e) => setWinners(e.target.value)} 
+              required 
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+            <div onClick={() => { setIsMystery(!isMystery); triggerHaptic('impact'); }} className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${isMystery ? 'bg-amber-500/5 border-amber-500/20 text-white' : 'bg-zinc-900/10 border-zinc-800/60 text-zinc-500'}`}>
+              <div className="space-y-0.5 text-left max-w-[85%]">
+                <div className="text-xs font-bold text-amber-400">🎰 Mystery Mechanism</div>
+                <p className="text-[10px] text-zinc-500 leading-normal">Gamified rewards. Random payouts from a single pool.</p>
+              </div>
+              <div className="h-4.5 w-4.5 rounded border flex items-center justify-center shrink-0 data-box">{isMystery && <Check className="h-3 w-3 stroke-3 text-amber-400" />}</div>
+            </div>
+
+            <div onClick={() => { setHasTrivia(!hasTrivia); triggerHaptic('impact'); }} className={`p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${hasTrivia ? 'bg-brand-accent/5 border-brand-accent/20 text-white' : 'bg-zinc-900/10 border-zinc-800/60 text-zinc-500'}`}>
+              <div className="space-y-0.5 text-left max-w-[85%]">
+                <div className="text-xs font-bold text-brand-accent">🧠 Trivia Verification Gate</div>
+                <p className="text-[10px] text-zinc-500 leading-normal">Keep rewards for real humans with trivia verification.</p>
+              </div>
+              <div className="h-4.5 w-4.5 rounded border flex items-center justify-center shrink-0 data-box">{hasTrivia && <Check className="h-3 w-3 stroke-3 text-brand-accent" />}</div>
+            </div>
+          </div>
+
+          {hasTrivia && (
+            <GlassCard className="p-4 space-y-4 border-zinc-800 bg-zinc-950/40 rounded-xl animate-reveal">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Verification Quiz Question</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="What protocol protects Swifty transactions?"
+                  value={triviaQuestion} 
+                  onChange={(e) => setTriviaQuestion(e.target.value)}
+                  className="w-full bg-zinc-900/40 border border-zinc-800 rounded-xl p-2.5 text-xs font-medium text-white outline-none focus:border-zinc-700"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Options Grid (Max 4)</label>
+                  {triviaOptions.length < 4 && (
+                    <button type="button" onClick={addOptionField} className="text-[10px] font-black text-brand-accent flex items-center gap-0.5 hover:underline cursor-pointer">
+                      <Plus className="h-3 w-3" /> Add Option
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {triviaOptions.map((option, idx) => (
+                    <div key={idx} className="flex gap-2 items-center bg-zinc-900/20 border border-white/5 p-2 rounded-xl">
+                      <input 
+                        type="radio" 
+                        name="correctAnswer" 
+                        checked={correctIndex === idx} 
+                        onChange={() => setCorrectIndex(idx)} 
+                        className="w-3.5 h-3.5 accent-brand-accent cursor-pointer shrink-0 ml-1" 
+                      />
+                      <input 
+                        type="text" 
+                        required
+                        placeholder={`Choice Target #${idx + 1}`}
+                        value={option}
+                        onChange={(e) => handleOptionChange(idx, e.target.value)}
+                        className="flex-1 bg-zinc-950/40 border border-zinc-800 rounded-lg p-2 text-xs text-white outline-none focus:border-zinc-700"
+                      />
+                      {triviaOptions.length > 2 && (
+                        <button type="button" onClick={() => removeOptionField(idx)} className="p-1.5 text-zinc-600 hover:text-red-400 cursor-pointer">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
+          <div className="pt-2 md:text-right">
+            <Button type="submit" className="w-full md:w-auto md:px-10 font-black py-3.5 text-xs uppercase tracking-wider">
+              Create Campaign
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

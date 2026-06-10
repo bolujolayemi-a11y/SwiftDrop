@@ -59,7 +59,7 @@ export const dropStore = {
       isMystery: !!drop.isMystery,
       hasTrivia: !!drop.trivia,
       token: drop.token || 'USDT',
-      isDemo: false, // Core merchant campaign flag
+      isDemo: true, // Core merchant campaign flag
       analytics: {
         clicks: 1,
         history: []

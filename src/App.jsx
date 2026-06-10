@@ -26,26 +26,18 @@ export default function App() {
           new URLSearchParams(window.location.search).get('tgWebAppStartParam');
 
         if (rawStartParam) {
-          let cleanDropId = String(rawStartParam)
-          .replace(/^(drop_|claim_|drop-)/, '')
-          .split('_')[0]
-          .trim();
+          const stringParam = String(rawStartParam).trim();
+          
+          
+          const numericMatch = stringParam.match(/\d+/);
+          const finalId = numericMatch ? `drop-${numericMatch[0]}` : stringParam;
 
-          const drops = dropStore.getDrops();
-          const demos = dropStore.getDemos();
-
-          const targetDrop =
-            drops.find(d => String(d.id) === cleanDropId) ||
-            drops.find(d => String(d.id).includes(cleanDropId)) ||
-            dropStore.getDemos?.()?.find(d => String(d.id) === cleanDropId);
-
-          const finalId = targetDrop ? targetDrop.id : cleanDropId;
+          console.log("🎯 Pure Extracted Direct Claim ID Key:", finalId);
 
           setCurrentDropId(finalId);
 
-          // 🔥 IMPORTANT: force claim page
+          
           setCurrentPage('claim');
-
           setInitialized(true);
           return;
         }
@@ -72,7 +64,7 @@ export default function App() {
   return (
     <Providers>
       <PageWrapper>
-        {currentPage !== 'deeplink' && (
+        {currentPage !== 'claim' && currentPage !== 'deeplink' && (
           <Navbar onNavigate={handleNavigation} currentPage={currentPage} />
         )}
 

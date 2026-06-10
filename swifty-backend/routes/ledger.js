@@ -3,177 +3,213 @@ import express from "express";
 const router = express.Router();
 
 /* =========================
-   IN-MEMORY DATABASE
+   IN-MEMORY STORAGE ENGINE
    ========================= */
 let events = [];
 let dynamicDrops = [];
 
 /* =========================
-   CREATE DROP
+   CREATE CAMPAIGN DROP
    ========================= */
 router.post("/create-drop", (req, res) => {
-  const dropData = req.body;
+  try {
+    const dropData = req.body;
 
-  if (!dropData?.title || !dropData?.amount) {
-    return res.status(400).json({
-      success: false,
-      error: "title and amount required"
-    });
-  }
-
-  const generatedDrop = {
-    id: dropData.id || `drop-${Date.now()}`,
-    title: dropData.title,
-    amount: dropData.amount,
-    token: dropData.token || "USDT",
-    winnersCount: Number(dropData.winnersCount || 100),
-    claimedCount: 0,
-    analytics: {
-      history: []
+    if (!dropData?.title || !dropData?.amount) {
+      return res.status(400).json({
+        success: false,
+        error: "Campaign title and pool capital amount are required."
+      });
     }
-  };
 
-  dynamicDrops.unshift(generatedDrop);
+    const generatedDrop = {
+      id: dropData.id || `drop-${Date.now()}`,
+      title: dropData.title,
+      description: dropData.description || "",
+      amount: parseFloat(dropData.amount),
+      token: dropData.token || "USDT",
+      winnersCount: Number(dropData.winnersCount || 100),
+      claimedCount: 0,
+      isMystery: !!dropData.isMystery,
+      hasTrivia: !!dropData.hasTrivia,
+      trivia: dropData.trivia || null,
+      analytics: {
+        history: []
+      }
+    };
 
-  res.json({
-    success: true,
-    drop: generatedDrop
-  });
+    dynamicDrops.unshift(generatedDrop);
+
+    res.json({
+      success: true,
+      drop: generatedDrop
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Internal compilation failure." });
+  }
 });
 
 /* =========================
-   GET DROP
+   GET DROP BY IDENTIFIER
    ========================= */
 router.get("/drop/:id", (req, res) => {
-  const clean = (id) =>
-    String(id)
-      .replace(/^drop_/, "")
-      .replace(/^claim_/, "")
-      .replace(/^drop-/, "")
-      .trim();
+  try {
+    const clean = (id) =>
+      String(id)
+        .replace(/^drop_/, "")
+        .replace(/^claim_/, "")
+        .replace(/^drop-/, "")
+        .trim();
 
-  const id = clean(req.params.id);
+    const targetId = clean(req.params.id);
 
-  const drop = dynamicDrops.find(d => clean(d.id) === id);
+    // Matches clean or raw fallback string signatures smoothly
+    const drop = dynamicDrops.find(d => clean(d.id) === targetId || String(d.id) === String(req.params.id));
 
-  if (!drop) {
-    return res.status(404).json({
-      success: false,
-      error: "Drop not found"
+    if (!drop) {
+      return res.status(404).json({
+        success: false,
+        error: "Campaign reference not resolved."
+      });
+    }
+
+    res.json({
+      success: true,
+      drop
     });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Internal lookup error." });
   }
-
-  res.json({
-    success: true,
-    drop
-  });
 });
 
 /* =========================
    ADD EVENT (CLAIM / WITHDRAW)
    ========================= */
 router.post("/event", (req, res) => {
-  const event = req.body;
+  try {
+    const event = req.body;
 
-  if (!event?.userId) {
-    return res.status(400).json({
-      success: false,
-      error: "userId required"
-    });
-  }
-
-  const newEvent = {
-    id: Date.now(),
-    timestamp: Date.now(),
-    type: event.type, // claim | withdraw
-    userId: event.userId,
-    username: event.username || "user",
-    amount: Number(event.amount || 0),
-    token: event.token || "USDT",
-    dropId: event.dropId || null
-  };
-
-  events.unshift(newEvent);
-
-  /* update drop analytics if claim */
-  if (newEvent.type === "claim" && newEvent.dropId) {
-    const drop = dynamicDrops.find(d => String(d.id) === String(newEvent.dropId));
-
-    if (drop) {
-      drop.claimedCount += 1;
-      drop.analytics.history.unshift({
-        username: newEvent.username,
-        amount: newEvent.amount,
-        time: new Date().toISOString()
+    if (!event?.userId) {
+      return res.status(400).json({
+        success: false,
+        error: "Active user identifier context required."
       });
     }
+
+    const newEvent = {
+      id: event.id || Date.now(),
+      timestamp: Date.now(),
+      type: event.type, // claim | withdraw
+      userId: String(event.userId),
+      username: event.username || "user",
+      amount: Number(event.amount || 0),
+      token: event.token || "USDT",
+      dropId: event.dropId || null,
+      status: event.status || "completed"
+    };
+
+    events.unshift(newEvent);
+
+    /* Update drop tracking history if operation type is a reward distribution claim */
+    if (newEvent.type === "claim" && newEvent.dropId) {
+      const cleanId = (input) => String(input).replace(/^(drop_|claim_|drop-)/, '').trim();
+      const targetDropId = cleanId(newEvent.dropId);
+
+      const drop = dynamicDrops.find(d => cleanId(d.id) === targetDropId || String(d.id) === String(newEvent.dropId));
+
+      if (drop) {
+        drop.claimedCount += 1;
+        if (!drop.analytics) drop.analytics = { history: [] };
+        if (!drop.analytics.history) drop.analytics.history = [];
+        
+        drop.analytics.history.unshift({
+          username: newEvent.username,
+          userId: newEvent.userId,
+          amount: newEvent.amount,
+          time: "Just now",
+          timestamp: Date.now()
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      event: newEvent
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Event logging malfunction." });
   }
-
-  res.json({
-    success: true,
-    event: newEvent
-  });
 });
 
 /* =========================
-   WALLET (MAIN SOURCE)
+   WALLET HUB (FIXED: GET VIA PATH PARAMS)
    ========================= */
-router.post("/wallet", (req, res) => {
-  const { userId } = req.body;
+router.get("/wallet/:userId", (req, res) => {
+  try {
+    const { userId } = req.params;
 
-  const userEvents = events.filter(
-    e => String(e.userId) === String(userId)
-  );
+    const userEvents = events.filter(
+      e => String(e.userId) === String(userId)
+    );
 
-  const earnings = userEvents
-    .filter(e => e.type === "claim")
-    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const earnings = userEvents
+      .filter(e => e.type === "claim")
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
-  const withdrawals = userEvents
-    .filter(e => e.type === "withdraw")
-    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const withdrawals = userEvents
+      .filter(e => e.type === "withdraw")
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
-  res.json({
-    success: true,
-    earnings,
-    withdrawals,
-    balance: earnings - withdrawals,
-    events: userEvents
-  });
+    res.json({
+      success: true,
+      earnings,
+      withdrawals,
+      balance: earnings - withdrawals,
+      events: userEvents
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Failed to assemble wallet data." });
+  }
 });
 
 /* =========================
-   EARNINGS ONLY
+   EARNINGS HISTORY ONLY (FIXED: GET)
    ========================= */
-router.post("/earnings", (req, res) => {
-  const { userId } = req.body;
+router.get("/earnings/:userId", (req, res) => {
+  try {
+    const { userId } = req.params;
 
-  const total = events
-    .filter(e =>
-      String(e.userId) === String(userId) && e.type === "claim"
-    )
-    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const total = events
+      .filter(e => String(e.userId) === String(userId) && e.type === "claim")
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
-  res.json({
-    success: true,
-    total
-  });
+    res.json({
+      success: true,
+      total
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Retrieval failure." });
+  }
 });
 
 /* =========================
-   WITHDRAWALS ONLY
+   WITHDRAWALS TIMELINE (FIXED: GET)
    ========================= */
-router.post("/withdrawals", (req, res) => {
-  const { userId } = req.body;
+router.get("/withdrawals/:userId", (req, res) => {
+  try {
+    const { userId } = req.params;
 
-  const data = events.filter(
-    e => String(e.userId) === String(userId) && e.type === "withdraw"
-  );
+    const data = events.filter(
+      e => String(e.userId) === String(userId) && e.type === "withdraw"
+    );
 
-  res.json({
-    success: true,
-    data
-  });
+    res.json({
+      success: true,
+      data
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Retrieval failure." });
+  }
 });
 
 export default router;
