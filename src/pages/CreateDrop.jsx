@@ -102,7 +102,7 @@ export default function CreateDrop({ onNavigate }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !amount || !winners) {
       triggerHaptic('warning');
