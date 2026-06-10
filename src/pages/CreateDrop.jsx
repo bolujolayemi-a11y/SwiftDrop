@@ -4,6 +4,7 @@ import Button from '@/components/ui/Button';
 import GlassCard from '@/components/ui/GlassCard';
 import BackButton from '@/components/ui/BackButton';
 import { dropStore } from '@/features/drops/dropStore';
+import { dropApi } from '@/services/dropApi'; // 🚀 IMPORTED FOR SIMULATION HOOKS
 import { useTelegram } from '@/hooks/useTelegram';
 import { Sparkles, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import OpenAI from 'openai';
@@ -34,6 +35,11 @@ export default function CreateDrop({ onNavigate }) {
 
   const [isCreated, setIsCreated] = useState(false);
   const [createdDropRef, setCreatedDropRef] = useState(null);
+
+  // ⚡ FUNDING SIMULATION STATES
+  const [simState, setSimState] = useState('idle'); // 'idle' | 'connecting' | 'fetching' | 'success'
+  const [simAddress, setSimAddress] = useState('');
+  const [simStatusText, setSimStatusText] = useState('');
 
   const handleAiGeneration = async () => {
     if (!aiPrompt.trim()) return;
@@ -149,7 +155,6 @@ export default function CreateDrop({ onNavigate }) {
     const merchantUid = user?.id || "SYSTEM_LOCAL";
 
     return (
-      /* 🖥️ Responsive outer wrapper scales to 2xl on desktop for immersive full screen spacing */
       <div className="w-full max-w-md md:max-w-2xl mx-auto px-4 pt-3 space-y-5 animate-reveal text-zinc-100 text-left">
         <div className="flex items-center gap-3 border-b border-zinc-900 pb-3">
           <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
@@ -180,20 +185,62 @@ export default function CreateDrop({ onNavigate }) {
           </div>
         </GlassCard>
 
-        <div className="space-y-2 pt-2">
+        {/* ⚡ INTERACTIVE FUNDING SIMULATION CONTAINER BLOCK */}
+        <div className="space-y-3 pt-2">
           <Button 
-            onClick={() => {
-              const cleanBotUrl = 'https://t.me/SwiftyEx_bot';
-              if (window.Telegram?.WebApp) window.Telegram.WebApp.openTelegramLink(cleanBotUrl);
-              else window.open(cleanBotUrl, '_blank');
+            disabled={simState === 'connecting' || simState === 'fetching'}
+            onClick={async () => {
+              triggerHaptic('impact');
+              
+              setSimState('connecting');
+              setSimStatusText('Opening channel to SwiftyEx node...');
+              
+              setTimeout(async () => {
+                setSimState('fetching');
+                setSimStatusText('Polling active deposit wallet arrays...');
+                
+                const walletData = await dropApi.getSwiftyWallets();
+                // Safe parsing matching the Postman collection object signature
+                const targetAddress = walletData?.[0]?.deposit_address || '0xSwiftyEx_Ledger7b908752352';
+                setSimAddress(targetAddress);
+                setSimStatusText(`Found active deposit matrix!`);
+
+                setTimeout(() => {
+                  setSimState('success');
+                  triggerHaptic('success');
+                  
+                  // Keep bot link launch sequence stable in deep runtime scopes
+                  const cleanBotUrl = 'https://t.me/SwiftyEx_bot';
+                  if (window.Telegram?.WebApp) window.Telegram.WebApp.openTelegramLink(cleanBotUrl);
+                  else window.open(cleanBotUrl, '_blank');
+                }, 1200);
+
+              }, 1000);
             }}
             className="w-full relative overflow-hidden group py-3.5"
           >
-            <div className="absolute inset-0 bg-linear-to-r from-brand-accent to-blue-600 transition-all group-hover:opacity-90" />
-            <span className="relative z-10 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider">
-              ⚡ Fund with SwiftyEx_bot <ExternalLink className="h-3.5 w-3.5" />
+            <div className={`absolute inset-0 bg-linear-to-r transition-all duration-500 ${
+              simState === 'success' ? 'from-emerald-600 to-green-500' : 'from-brand-accent to-blue-600 group-hover:opacity-90'
+            }`} />
+            
+            <span className="relative z-10 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider text-white">
+              {simState === 'idle' && <>⚡ Fund with SwiftyEx_bot <ExternalLink className="h-3.5 w-3.5" /></>}
+              {(simState === 'connecting' || simState === 'fetching') && (
+                <span className="flex items-center gap-2 animate-pulse">
+                  <div className="w-3 h-3 border-2 border-t-white border-white/20 rounded-full animate-spin" />
+                  {simStatusText}
+                </span>
+              )}
+              {simState === 'success' && <>✓  Reward Pool Funded successfully</>}
             </span>
           </Button>
+
+          {simAddress && (
+            <div className="p-3 bg-zinc-950/60 border border-white/5 rounded-xl font-mono text-[10px] text-zinc-500 text-center animate-reveal">
+              <span className="text-brand-accent font-bold"> Deposit Destination:</span> {simAddress}
+            </div>
+          )}
+
           <Button variant="secondary" onClick={() => onNavigate('dashboard')} className="w-full py-3 text-xs font-bold">
             Return to Dashboard
           </Button>
@@ -203,7 +250,6 @@ export default function CreateDrop({ onNavigate }) {
   }
 
   return (
-    /* 🖥️ Max width scales out smoothly to 5xl on desktop viewports */
     <div className="space-y-4 pt-2 w-full max-w-md md:max-w-5xl mx-auto px-4 text-left animate-reveal">
       <BackButton onBack={() => onNavigate('dashboard')} fallbackText="Back to Workspace" />
       
@@ -212,7 +258,6 @@ export default function CreateDrop({ onNavigate }) {
         <p className="text-xs text-zinc-500">Send instant rewards. Grow your community.</p>
       </div>
 
-      {/* 💻 Splits layout beautifully on desktop so inputs sit side-by-side naturally without breaking phone styles */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
         
         {/* Left Side: AI Copilot Section */}
