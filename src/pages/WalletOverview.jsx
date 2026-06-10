@@ -130,7 +130,7 @@ export default function WalletOverview({ onNavigate }) {
   return (
     /* 🖥️ Responsive outer wrapper scales workspace elements neatly on desktop grids */
     <div className="space-y-4 p-4 text-left w-full max-w-md md:max-w-5xl mx-auto animate-reveal text-zinc-100">
-      <BackButton onBack={() => onNavigate('home')} fallbackText="Home" />
+      <BackButton onBack={() => onNavigate('claim')} fallbackText="Back to Claim" />
       
       <div className="space-y-0.5">
         <h2 className="text-xl font-black tracking-tight text-white">Wallet Studio</h2>
