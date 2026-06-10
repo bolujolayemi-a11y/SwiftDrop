@@ -190,7 +190,7 @@ export default function ClaimReward({ id, onNavigate }) {
                   </button>
                 ) : (
                   <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold tracking-wider uppercase">
-                    Verification Matrix Cleared
+                    Verified - Ready to Claim
                   </div>
                 )}
               </div>

@@ -19,7 +19,7 @@ export default function DropDetails({ id, onNavigate, setDropId }) {
 
   // 🚀 High-Fidelity Viral Share Mechanism
   const handleShareCampaign = () => {
-    const appUrl = `https://t.me/swift_dropbot?startapp=${drop.id}`;
+    const appUrl = `https://t.me/swift_dropbot/app?startapp=${drop.id}`;
     const rawText = `🎁 Grab your share of the ${drop.title} reward pool instantly on SwiftDrop!`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(rawText)}`;
 
