@@ -235,7 +235,7 @@ export default function CreateDrop({ onNavigate }) {
                 disabled={isAiGenerating}
                 className="w-full bg-brand-accent text-white rounded-xl py-2 text-xs font-bold hover:bg-blue-600 disabled:opacity-50 cursor-pointer transition-colors"
               >
-                {isAiGenerating ? "Processing..." : "Generate Structure"}
+                {isAiGenerating ? "Processing..." : "Enter"}
               </button>
             </div>
           </GlassCard>
