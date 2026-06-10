@@ -1,30 +1,33 @@
 import { Telegraf, Markup } from 'telegraf';
-import { Redis } from '@upstash/redis';
-import { NextResponse } from 'next/server';
+import { kv } from '@vercel/kv'; // 🧠 Connects straight to your new Upstash Redis cluster
 
-// 🤖 INITIALIZE YOUR BOT CONTEXT
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const MINI_APP_URL = 'https://swift-drop-eta.vercel.app/';
 
-// 🧠 INITIALIZE YOUR GLOBAL MEMORY ENGINE
-const redis = Redis.fromEnv();
+const MINI_APP_URL = 'https://swift-drop-eta.vercel.app/';
 
 // 🔐 Safe payload validator
 function sanitizePayload(payload) {
   if (!payload) return null;
+
+  // allow only safe characters (letters, numbers, -, _)
   const isValid = /^[a-zA-Z0-9_-]+$/.test(payload);
-  return isValid ? payload : null;
+
+  if (!isValid) return null;
+
+  return payload;
 }
 
 bot.start((ctx) => {
   const rawPayload = ctx.startPayload;
   const startPayload = sanitizePayload(rawPayload);
+
   const isDeepLink = Boolean(startPayload);
 
   const welcomeMessage = isDeepLink
     ? `🎁 *Swifty Reward Drop Detected!*\n\nYou've been invited to claim a dynamic crypto allocation pool.`
     : `⚡ *Welcome to SwiftDrop*\n\nDeploy and track high-conversion micro-incentives natively inside Telegram channels.`;
 
+  // Build deep link safely
   const appTargetUrl = isDeepLink
     ? `${MINI_APP_URL}?dropId=${encodeURIComponent(startPayload)}`
     : MINI_APP_URL;
@@ -37,66 +40,46 @@ bot.start((ctx) => {
   });
 });
 
-/* =========================================================
-   🤖 POST ROUTE: Handles Bot Webhooks OR Campaign Creation
-   ========================================================= */
-export const POST = async (request) => {
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action');
+// 🌐 Vercel serverless handler (Unified Routing Engine)
+export default async function handler(req, res) {
+  const { method, query } = req;
 
   try {
-    // 💾 INTERFACE 1: Save created drops globally into Upstash Redis Cache
-    if (action === 'save') {
-      const body = await request.json();
-      const { dropId, dropData } = body;
-      
+    // 💾 INTERFACE 1: Save created drops globally into Vercel KV Cache
+    if (method === 'POST' && query.action === 'save') {
+      const { dropId, dropData } = req.body;
       if (!dropId || !dropData) {
-        return NextResponse.json({ success: false, error: 'Missing required payload fields' }, { status: 400 });
+        return res.status(400).json({ success: false, error: 'Missing required payload fields' });
       }
-
-      await redis.set(`drop:${dropId}`, JSON.stringify(dropData));
-      return NextResponse.json({ success: true }, { status: 200 });
+      
+      await kv.set(`drop:${dropId}`, dropData); // Stored in cloud cache persistently!
+      return res.status(200).json({ success: true });
     }
 
-    // 🤖 INTERFACE 2: Standard Incoming Telegram Bot Webhook Updates
-    const body = await request.json();
-    await bot.handleUpdate(body);
-    return new NextResponse('OK', { status: 200 });
-
-  } catch (error) {
-    console.error('Webhook or Save execution failure:', error);
-    return new NextResponse('Internal Error', { status: 500 });
-  }
-};
-
-/* =========================================================
-   🔍 GET ROUTE: Resolves Shared Links on External Devices
-   ========================================================= */
-export const GET = async (request) => {
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action');
-  const dropId = searchParams.get('dropId');
-
-  try {
-    if (action === 'get') {
+    // 🔍 INTERFACE 2: Retrieve drop context parameters across external devices
+    if (method === 'GET' && query.action === 'get') {
+      const { dropId } = query;
       if (!dropId) {
-        return NextResponse.json({ success: false, error: 'Missing parameter dropId' }, { status: 400 });
+        return res.status(400).json({ success: false, error: 'Missing parameter dropId' });
       }
 
-      const drop = await redis.get(`drop:${dropId}`);
+      const drop = await kv.get(`drop:${dropId}`);
       if (!drop) {
-        return NextResponse.json({ success: false, error: 'Allocation pool not found' }, { status: 404 });
+        return res.status(404).json({ success: false, error: 'Allocation pool not found' });
       }
 
-      // If Upstash returns it as a string, parse it automatically
-      const parsedDrop = typeof drop === 'string' ? JSON.parse(drop) : drop;
-      return NextResponse.json({ success: true, drop: parsedDrop }, { status: 200 });
+      return res.status(200).json({ success: true, drop });
     }
 
-    return new NextResponse('SwiftDrop Engine Running...', { status: 200 });
+    // 🤖 INTERFACE 3: Standard Incoming Telegram Bot Webhook Updates
+    if (method === 'POST') {
+      await bot.handleUpdate(req.body);
+      return res.status(200).send('OK');
+    }
 
+    return res.status(200).send('SwiftDrop engine running...');
   } catch (error) {
-    console.error('Link lookup processing failure:', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    console.error('Webhook processing failure:', error);
+    return res.status(500).send('Internal Error');
   }
-};
+}
