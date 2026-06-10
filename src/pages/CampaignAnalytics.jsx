@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { dropStore } from '@/features/drops/dropStore';
 import GlassCard from '@/components/ui/GlassCard';
 import BackButton from '@/components/ui/BackButton';
