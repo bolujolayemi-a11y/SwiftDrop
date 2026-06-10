@@ -3,6 +3,9 @@ import { dropApi } from '@/services/dropApi';
 
 const STORAGE_KEY = 'swifty_drops';
 
+// Base API URL pointing straight to your active serverless function route
+const VERCEL_API_ENDPOINT = 'https://swift-drop-eta.vercel.app/api/bot';
+
 function loadDrops() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -43,7 +46,6 @@ export const dropStore = {
 
   getDrops() {
     this.drops = loadDrops(); 
-    // 🧠 FIX: Hide any cloned interactive demos from showing up on the Merchant Dashboard
     return this.drops.filter(d => d.isDemo !== true);
   },
 
@@ -51,7 +53,8 @@ export const dropStore = {
     return this.demos;
   },
 
-  addDrop(drop) {
+  // 💾 1. SAVE LOCAL DISK CAMPAIGNS AND PUSH COPIES TO VERCEL REDIS KV
+  async addDrop(drop) {
     const newDrop = {
       id: `drop-${Date.now()}`, 
       claimedCount: 0,
@@ -59,7 +62,7 @@ export const dropStore = {
       isMystery: !!drop.isMystery,
       hasTrivia: !!drop.trivia,
       token: drop.token || 'USDT',
-      isDemo: false, // Core merchant campaign flag
+      isDemo: false, 
       analytics: {
         clicks: 1,
         history: []
@@ -67,14 +70,28 @@ export const dropStore = {
       ...drop
     };
 
+    // Keep state management lightning fast locally for the active user session
     this.drops = [newDrop, ...loadDrops()];
     saveDrops(this.drops); 
     this.notify();
+
+    // 🔥 BACKEND SYNC: Broadcast allocation details globally to Vercel KV via Upstash
+    try {
+      await fetch(`${VERCEL_API_ENDPOINT}?action=save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dropId: newDrop.id, dropData: newDrop })
+      });
+      console.log(`📡 Campaign globally backed up to Vercel Cloud Cache: ${newDrop.id}`);
+    } catch (err) {
+      console.error('Vercel KV over-the-air synchronization failed:', err);
+    }
+
     return newDrop;
   },
 
-  // 🧠 RESILIENT IDENTIFIER NORMALIZER
-  getDropById(id) {
+  // 🔍 2. DYNAMIC LOOKUP WITH MULTI-DEVICE CLOUD FAILSAFE
+  async getDropById(id) {
     if (!id) return null;
     
     const activeDrops = loadDrops(); 
@@ -90,11 +107,26 @@ export const dropStore = {
 
     const targetId = cleanId(id);
 
-    return (
+    // Look locally on the current user's disk storage matrix first
+    const foundLocal = 
       activeDrops.find(d => cleanId(d.id) === targetId || String(d.id) === String(id)) ||
-      demos.find(d => cleanId(d.id) === targetId || String(d.id) === String(id)) ||
-      null
-    );
+      demos.find(d => cleanId(d.id) === targetId || String(d.id) === String(id));
+
+    if (foundLocal) return foundLocal;
+
+    // 🔥 MULTI-DEVICE OVER-THE-AIR RESOLVER: Fallback to your live cloud KV datastore
+    try {
+      const response = await fetch(`${VERCEL_API_ENDPOINT}?action=get&dropId=${id}`);
+      const result = await response.json();
+      if (result.success && result.drop) {
+        console.log(`🔗 Unrecognized cross-device campaign resolved from Vercel KV storage!`);
+        return result.drop;
+      }
+    } catch (err) {
+      console.error('Remote data synchronization fallback failed:', err);
+    }
+
+    return null;
   },
 
   hasUserClaimed(userId, dropId) {
@@ -104,7 +136,9 @@ export const dropStore = {
 
   claimDrop(id, { userId, username }) {
     this.drops = loadDrops();
-    const drop = this.getDropById(id);
+    
+    // 🧠 FIX: Reference this.drops accurately instead of the unbound activeDrops array
+    const drop = this.drops.find(d => String(d.id) === String(id)) || this.demos.find(d => String(d.id) === String(id));
     if (!drop) return { success: false, message: 'Pool context not resolved.' };
 
     if (this.hasUserClaimed(userId, drop.id)) {
@@ -113,12 +147,9 @@ export const dropStore = {
 
     const targetIndex = this.drops.findIndex(d => String(d.id) === String(drop.id));
     
-    // 💵 FIX: Dynamic Math Allocation Engine
-    // 💵 TRUE RANDOMIZED DYNAMIC POOL MATH ENGINE
     const totalPoolSize = parseFloat(drop.amount) || 0;
     const maxWinners = parseInt(drop.winnersCount, 10) || 1;
     
-    // 1. Calculate how much capital has already been claimed out of this pool
     const claimedVolume = (drop.analytics?.history || []).reduce(
       (sum, record) => sum + parseFloat(record.amount || 0), 
       0
@@ -130,24 +161,18 @@ export const dropStore = {
     let amountClaimed = '0.00';
 
     if (remainingSlots <= 1) {
-      // 🎯 Last person standing takes the absolute remainder of the capital to empty the pool perfectly
       amountClaimed = remainingPool.toFixed(2);
     } else if (remainingPool <= 0) {
       amountClaimed = '0.00';
     } else {
-      // 🎰 Dynamic Boundary Formula: Compute weighted random allocation caps
       const averageRemainingAllocation = remainingPool / remainingSlots;
-      
-      // Keep a tiny reserve so future users are guaranteed to get at least $0.01
       const safetyReserve = (remainingSlots - 1) * 0.01;
-      
       const minPayout = 0.01;
       const maxPayout = Math.max(
         minPayout, 
         Math.min(remainingPool - safetyReserve, averageRemainingAllocation * 2)
       );
 
-      // Roll the dice between the minimum penny and our mathematical ceiling
       const randomRoll = Math.random() * (maxPayout - minPayout) + minPayout;
       amountClaimed = randomRoll.toFixed(2);
     }
@@ -165,15 +190,13 @@ export const dropStore = {
     if (targetIndex !== -1) {
       this.drops[targetIndex] = drop;
     } else {
-      this.drops.push(drop); // Clone demo drops into live tracking local storage safely
+      this.drops.push(drop); 
     }
 
-    // Persist modifications to disk storage fields
     userClaimsRegistry[`${userId}-${drop.id}`] = true;
     localStorage.setItem('swifty_claims_registry', JSON.stringify(userClaimsRegistry));
     saveDrops(this.drops);
 
-    // Push analytics ping downstream to your running API port
     dropApi.addEvent({
       type: 'claim',
       userId,
